@@ -1,0 +1,5 @@
+---
+clouds:
+  service:
+    auth:
+      password: password

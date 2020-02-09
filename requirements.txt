@@ -1,0 +1,4 @@
+PyYAML
+openstacksdk
+os-client-config
+python-neutronclient

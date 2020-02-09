@@ -1,0 +1,129 @@
+---
+default:
+  compute:
+    cores: 0
+    fixed_ips: 0
+    floating_ips: 0
+    injected_file_content_bytes: 10240
+    injected_file_path_bytes: 255
+    injected_files: 5
+    instances: 0
+    key_pairs: 0
+    metadata_items: 128
+    ram: 0
+    security_group_rules: 0
+    security_groups: 0
+    server_group_members: 0
+    server_groups: 0
+  network:
+    firewall: 0
+    firewall_policy: 0
+    firewall_rule: 0
+    floatingip: 0
+    healthmonitor: 0
+    l7policy: 0
+    listener: 0
+    loadbalancer: 0
+    member: 0
+    network: 0
+    pool: 0
+    port: 0
+    rbac_policy: 0
+    router: 0
+    security_group: 0
+    security_group_rule: 0
+    subnet: 0
+    subnetpool: 0
+  volume:
+    backup_gigabytes: 0
+    backups: 0
+    gigabytes: 0
+    per_volume_gigabytes: 0
+    snapshots: 0
+    volumes: 0
+
+service:
+  compute:
+    cores: 0
+    fixed_ips: 0
+    floating_ips: 0
+    injected_file_content_bytes: 10240
+    injected_file_path_bytes: 255
+    injected_files: 5
+    instances: 0
+    key_pairs: 0
+    metadata_items: 128
+    ram: 0
+    security_group_rules: 0
+    security_groups: 0
+    server_group_members: 0
+    server_groups: 0
+  network:
+    firewall: 0
+    firewall_policy: 0
+    firewall_rule: 0
+    floatingip: 0
+    healthmonitor: 0
+    l7policy: 0
+    listener: 0
+    loadbalancer: 0
+    member: 0
+    network: 256
+    pool: 0
+    port: 256
+    rbac_policy: 1024
+    router: 256
+    security_group: 0
+    security_group_rule: 0
+    subnet: 256
+    subnetpool: 256
+  volume:
+    backup_gigabytes: 0
+    backups: 0
+    gigabytes: 0
+    per_volume_gigabytes: 0
+    snapshots: 0
+    volumes: 0
+
+basic:
+  compute:
+    cores: 4
+    fixed_ips: 10
+    floating_ips: 4
+    injected_file_content_bytes: 10240
+    injected_file_path_bytes: 255
+    injected_files: 5
+    instances: 4
+    key_pairs: 4
+    metadata_items: 128
+    ram: 8192
+    security_group_rules: 20
+    security_groups: 5
+    server_group_members: 4
+    server_groups: 4
+  network:
+    firewall: 0
+    firewall_policy: 0
+    firewall_rule: 0
+    floatingip: 4
+    healthmonitor: 5
+    l7policy: 5
+    listener: 2
+    loadbalancer: 1
+    member: 5
+    network: 1
+    pool: 1
+    port: 20
+    rbac_policy: 10
+    router: 1
+    security_group: 5
+    security_group_rule: 20
+    subnet: 2
+    subnetpool: 1
+  volume:
+    backup_gigabytes: 0
+    backups: 0
+    gigabytes: 20
+    per_volume_gigabytes: 200
+    snapshots: 4
+    volumes: 4
