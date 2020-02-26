@@ -125,11 +125,50 @@ def create_network_resources(project, domain):
         else:
             create_network_with_router(project, net_name, subnet_name, router_name, public_net_name)
 
+    if "has_shared_router" in project and project.has_shared_router.lower() in ["true", "True", "yes", "Yes"]:
+
+        net_name = "net-to-public-%s" % project_name
+
+        if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
+            logging.info("%s - it's a service project, network resources are not created" % project.name)
+        else:
+            create_network(project, net_name, subnet_name)
+            add_service_network(project, net_name)
+
+
+def add_service_network(project, net_name):
+
+    domain = cloud.get_domain(name_or_id=project.domain_id)
+    project_service = cloud.get_project(name_or_id="service-%s" % domain.name)
+
+    try:
+        logging.info("%s - check service rbac policy (%s)" % (project.name, net_name))
+        net = cloud.get_network(net_name)
+        rbac_policies = neutron.list_rbac_policies(**{
+            'target_tenant': project_service.id,
+            'action': 'access_as_shared',
+            'object_type': 'network',
+            'object_id': net.id,
+            'fields': 'id'
+        })
+
+        if not CONF.dry_run and len(rbac_policies) == 0:
+            logging.info("%s - create service rbac policy (%s)" % (project.name, net_name))
+            neutron.create_rbac_policy({'rbac_policy': {
+                'target_tenant': project_service,
+                'action': 'access_as_shared',
+                'object_type': 'network',
+                'object_id': net.id
+            }})
+
+    except neutronclient.common.exceptions.Conflict:
+        pass
+
 
 def add_external_network(project, public_net_name):
 
     try:
-        logging.info("%s - check rbac policy (%s)" % (project.name, public_net_name))
+        logging.info("%s - check external rbac policy (%s)" % (project.name, public_net_name))
 
         public_net = cloud.get_network(public_net_name)
         rbac_policies = neutron.list_rbac_policies(**{
@@ -141,7 +180,7 @@ def add_external_network(project, public_net_name):
         })
 
         if not CONF.dry_run and len(rbac_policies) == 0:
-            logging.info("%s - create rbac policy (%s)" % (project.name, public_net_name))
+            logging.info("%s - create external rbac policy (%s)" % (project.name, public_net_name))
             neutron.create_rbac_policy({'rbac_policy': {
                 'target_tenant': project.id,
                 'action': 'access_as_external',
@@ -153,7 +192,7 @@ def add_external_network(project, public_net_name):
         pass
 
 
-def create_network(project, net_name, subnet_name, public_net_name):
+def create_network(project, net_name, subnet_name):
 
     attach = False
     net = cloud.get_network(net_name, filters={"project_id": project.id})
@@ -199,7 +238,7 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
             )
         attach_router = True
 
-    attach_subnet, subnet = create_network(project, net_name, subnet_name, public_net_name)
+    attach_subnet, subnet = create_network(project, net_name, subnet_name)
 
     if attach_router or attach_subnet:
         logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
