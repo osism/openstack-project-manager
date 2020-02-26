@@ -155,7 +155,9 @@ def add_external_network(project, public_net_name):
 
 def create_network(project, net_name, subnet_name, public_net_name):
 
+    attach = False
     net = cloud.get_network(net_name, filters={"project_id": project.id})
+
     if not net:
         logging.info("%s - create network (%s)" % (project.name, net_name))
 
@@ -181,8 +183,8 @@ def create_network(project, net_name, subnet_name, public_net_name):
 
 def create_network_with_router(project, net_name, subnet_name, router_name, public_net_name):
 
+    attach_router = False
     router = cloud.get_router(router_name, filters={"project_id": project.id})
-    attach = False
 
     if not router:
         public_network_id = cloud.get_network(public_net_name).id
@@ -195,11 +197,11 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
                 enable_snat=True,
                 project_id=project.id
             )
-        attach = True
+        attach_router = True
 
-    attach, subnet = create_network(project, net_name, subnet_name, public_net_name)
+    attach_subnet, subnet = create_network(project, net_name, subnet_name, public_net_name)
 
-    if attach:
+    if attach_router or attach_subnet:
         logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
         if not CONF.dry_run:
             cloud.add_router_interface(router, subnet_id=subnet.id)
