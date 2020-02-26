@@ -135,47 +135,52 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
     except neutronclient.common.exceptions.Conflict:
         pass
 
-    router = cloud.get_router(router_name, filters={"project_id": project.id})
-    attach = False
+    if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
+        logging.info("%s - it's a service project, network resources are not created" % (project.name, router_name))
 
-    if not router:
-        public_network_id = cloud.get_network(public_net_name).id
-        logging.info("%s - create router (%s)" % (project.name, router_name))
+    else:
 
-        if not CONF.dry_run:
-            router = cloud.create_router(
-                name=router_name,
-                ext_gateway_net_id=public_network_id,
-                enable_snat=True,
-                project_id=project.id
-            )
-        attach = True
+        router = cloud.get_router(router_name, filters={"project_id": project.id})
+        attach = False
 
-    net = cloud.get_network(net_name, filters={"project_id": project.id})
-    if not net:
-        logging.info("%s - create network (%s)" % (project.name, net_name))
+        if not router:
+            public_network_id = cloud.get_network(public_net_name).id
+            logging.info("%s - create router (%s)" % (project.name, router_name))
 
-        if not CONF.dry_run:
-            net = cloud.create_network(net_name, project_id=project.id)
+            if not CONF.dry_run:
+                router = cloud.create_router(
+                    name=router_name,
+                    ext_gateway_net_id=public_network_id,
+                    enable_snat=True,
+                    project_id=project.id
+                )
+            attach = True
 
-    subnet = cloud.get_subnet(subnet_name, filters={"project_id": project.id})
-    if not subnet:
-        logging.info("%s - create subnet (%s)" % (project.name, subnet_name))
+        net = cloud.get_network(net_name, filters={"project_id": project.id})
+        if not net:
+            logging.info("%s - create network (%s)" % (project.name, net_name))
 
-        if not CONF.dry_run:
-            subnet = cloud.create_subnet(
-                net.id,
-                tenant_id=project.id,
-                subnet_name=subnet_name,
-                use_default_subnetpool=True,
-                enable_dhcp=True
-            )
-        attach = True
+            if not CONF.dry_run:
+                net = cloud.create_network(net_name, project_id=project.id)
 
-    if attach:
-        logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
-        if not CONF.dry_run:
-            cloud.add_router_interface(router, subnet_id=subnet.id)
+        subnet = cloud.get_subnet(subnet_name, filters={"project_id": project.id})
+        if not subnet:
+            logging.info("%s - create subnet (%s)" % (project.name, subnet_name))
+
+            if not CONF.dry_run:
+                subnet = cloud.create_subnet(
+                    net.id,
+                    tenant_id=project.id,
+                    subnet_name=subnet_name,
+                    use_default_subnetpool=True,
+                    enable_dhcp=True
+                )
+            attach = True
+
+        if attach:
+            logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
+            if not CONF.dry_run:
+                cloud.add_router_interface(router, subnet_id=subnet.id)
 
 
 def process_project(project):
