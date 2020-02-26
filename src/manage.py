@@ -97,24 +97,41 @@ def create_network_resources(project, domain):
 
     if "has_public_network" in project and project.has_public_network.lower() in ["true", "True", "yes", "Yes"]:
         logging.info("%s - check public network resources" % project.name)
+
         net_name = "net-to-public-%s" % project_name
+        public_net_name = "public"
         router_name = "router-to-public-%s" % project_name
         subnet_name = "subnet-to-public-%s" % project_name
-        create_network_with_router(project, net_name, subnet_name, router_name, "public")
+
+        add_external_network(project, public_net_name)
+
+        if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
+            logging.info("%s - it's a service project, network resources are not created" % project.name)
+        else:
+            create_network_with_router(project, net_name, subnet_name, router_name, public_net_name)
 
     if "domain_name" != "default" and "has_domain_network" in project and project.has_domain_network.lower() in ["true", "True", "yes", "Yes"]:
         logging.info("%s - check domain network resources" % project.name)
+
         net_name = "net-to-%s-public-%s" % (domain_name, project_name)
+        public_net_name = "%s-public" % domain_name
         router_name = "router-to-%s-public-%s" % (domain_name, project_name)
         subnet_name = "subnet-to-%s-public-%s" % (domain_name, project_name)
-        create_network_with_router(project, net_name, subnet_name, router_name, "%s-public" % domain_name)
+
+        add_external_network(project, public_net_name)
+
+        if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
+            logging.info("%s - it's a service project, network resources are not created" % project.name)
+        else:
+            create_network_with_router(project, net_name, subnet_name, router_name, public_net_name)
 
 
-def create_network_with_router(project, net_name, subnet_name, router_name, public_net_name):
+def add_external_network(project, public_net_name):
 
     try:
-        public_net = cloud.get_network(public_net_name)
+        logging.info("%s - check rbac policy (%s)" % (project.name, public_net_name))
 
+        public_net = cloud.get_network(public_net_name)
         rbac_policies = neutron.list_rbac_policies(**{
             'target_tenant': project.id,
             'action': 'access_as_external',
@@ -135,52 +152,50 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
     except neutronclient.common.exceptions.Conflict:
         pass
 
-    if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
-        logging.info("%s - it's a service project, network resources are not created" % project.name)
 
-    else:
+def create_network_with_router(project, net_name, subnet_name, router_name, public_net_name):
 
-        router = cloud.get_router(router_name, filters={"project_id": project.id})
-        attach = False
+    router = cloud.get_router(router_name, filters={"project_id": project.id})
+    attach = False
 
-        if not router:
-            public_network_id = cloud.get_network(public_net_name).id
-            logging.info("%s - create router (%s)" % (project.name, router_name))
+    if not router:
+        public_network_id = cloud.get_network(public_net_name).id
+        logging.info("%s - create router (%s)" % (project.name, router_name))
 
-            if not CONF.dry_run:
-                router = cloud.create_router(
-                    name=router_name,
-                    ext_gateway_net_id=public_network_id,
-                    enable_snat=True,
-                    project_id=project.id
-                )
-            attach = True
+        if not CONF.dry_run:
+            router = cloud.create_router(
+                name=router_name,
+                ext_gateway_net_id=public_network_id,
+                enable_snat=True,
+                project_id=project.id
+            )
+        attach = True
 
-        net = cloud.get_network(net_name, filters={"project_id": project.id})
-        if not net:
-            logging.info("%s - create network (%s)" % (project.name, net_name))
+    net = cloud.get_network(net_name, filters={"project_id": project.id})
+    if not net:
+        logging.info("%s - create network (%s)" % (project.name, net_name))
 
-            if not CONF.dry_run:
-                net = cloud.create_network(net_name, project_id=project.id)
+        if not CONF.dry_run:
+            net = cloud.create_network(net_name, project_id=project.id)
 
-        subnet = cloud.get_subnet(subnet_name, filters={"project_id": project.id})
-        if not subnet:
-            logging.info("%s - create subnet (%s)" % (project.name, subnet_name))
+    subnet = cloud.get_subnet(subnet_name, filters={"project_id": project.id})
+    if not subnet:
+        logging.info("%s - create subnet (%s)" % (project.name, subnet_name))
 
-            if not CONF.dry_run:
-                subnet = cloud.create_subnet(
-                    net.id,
-                    tenant_id=project.id,
-                    subnet_name=subnet_name,
-                    use_default_subnetpool=True,
-                    enable_dhcp=True
-                )
-            attach = True
+        if not CONF.dry_run:
+            subnet = cloud.create_subnet(
+                net.id,
+                tenant_id=project.id,
+                subnet_name=subnet_name,
+                use_default_subnetpool=True,
+                enable_dhcp=True
+            )
+        attach = True
 
-        if attach:
-            logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
-            if not CONF.dry_run:
-                cloud.add_router_interface(router, subnet_id=subnet.id)
+    if attach:
+        logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
+        if not CONF.dry_run:
+            cloud.add_router_interface(router, subnet_id=subnet.id)
 
 
 def process_project(project):
