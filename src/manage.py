@@ -133,20 +133,17 @@ def create_network_resources(project, domain):
         if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
             logging.info("%s - it's a service project, network resources are not created" % project.name)
         else:
-            create_network(project, net_name, subnet_name)
+            create_service_network(project, net_name, subnet_name)
             add_service_network(project, net_name)
 
 
 def add_service_network(project, net_name):
 
-    domain = cloud.get_domain(name_or_id=project.domain_id)
-    project_service = cloud.get_project(name_or_id="service-%s" % domain.name)
-
     try:
         logging.info("%s - check service rbac policy (%s)" % (project.name, net_name))
         net = cloud.get_network(net_name)
         rbac_policies = neutron.list_rbac_policies(**{
-            'target_tenant': project_service.id,
+            'target_tenant': project.id,
             'action': 'access_as_shared',
             'object_type': 'network',
             'object_id': net.id,
@@ -156,7 +153,7 @@ def add_service_network(project, net_name):
         if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 0:
             logging.info("%s - create service rbac policy (%s)" % (project.name, net_name))
             neutron.create_rbac_policy({'rbac_policy': {
-                'target_tenant': project_service.id,
+                'target_tenant': project.id,
                 'action': 'access_as_shared',
                 'object_type': 'network',
                 'object_id': net.id
@@ -191,6 +188,33 @@ def add_external_network(project, public_net_name):
 
     except neutronclient.common.exceptions.Conflict:
         pass
+
+
+def create_service_network(project, net_name, subnet_name):
+
+    domain = cloud.get_domain(name_or_id=project.domain_id)
+    project_service = cloud.get_project(name_or_id="service-%s" % domain.name)
+
+    net = cloud.get_network(net_name, filters={"project_id": project_service.id})
+
+    if not net:
+        logging.info("%s - create service network (%s)" % (project.name, net_name))
+
+        if not CONF.dry_run:
+            net = cloud.create_network(net_name, project_id=project_service.id)
+
+    subnet = cloud.get_subnet(subnet_name, filters={"project_id": project_service.id})
+    if not subnet:
+        logging.info("%s - create service subnet (%s)" % (project.name, subnet_name))
+
+        if not CONF.dry_run:
+            subnet = cloud.create_subnet(
+                net.id,
+                tenant_id=project_service.id,
+                subnet_name=subnet_name,
+                use_default_subnetpool=True,
+                enable_dhcp=True
+            )
 
 
 def create_network(project, net_name, subnet_name):
