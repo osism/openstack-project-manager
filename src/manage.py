@@ -128,6 +128,7 @@ def create_network_resources(project, domain):
     if "has_shared_router" in project and project.has_shared_router.lower() in ["true", "True", "yes", "Yes"]:
 
         net_name = "net-to-public-%s" % project_name
+        subnet_name = "subnet-to-public-%s" % project_name
 
         if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
             logging.info("%s - it's a service project, network resources are not created" % project.name)
