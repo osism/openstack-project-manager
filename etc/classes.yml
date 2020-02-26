@@ -59,9 +59,9 @@ service:
     server_group_members: 0
     server_groups: 0
   network:
-    firewall: 0
-    firewall_policy: 0
-    firewall_rule: 0
+    firewall: 256
+    firewall_policy: 256
+    firewall_rule: 512
     floatingip: 0
     healthmonitor: 0
     l7policy: 0
