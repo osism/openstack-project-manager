@@ -153,23 +153,7 @@ def add_external_network(project, public_net_name):
         pass
 
 
-def create_network_with_router(project, net_name, subnet_name, router_name, public_net_name):
-
-    router = cloud.get_router(router_name, filters={"project_id": project.id})
-    attach = False
-
-    if not router:
-        public_network_id = cloud.get_network(public_net_name).id
-        logging.info("%s - create router (%s)" % (project.name, router_name))
-
-        if not CONF.dry_run:
-            router = cloud.create_router(
-                name=router_name,
-                ext_gateway_net_id=public_network_id,
-                enable_snat=True,
-                project_id=project.id
-            )
-        attach = True
+def create_network(project, net_name, subnet_name, public_net_name):
 
     net = cloud.get_network(net_name, filters={"project_id": project.id})
     if not net:
@@ -191,6 +175,29 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
                 enable_dhcp=True
             )
         attach = True
+
+    return subnet
+
+
+def create_network_with_router(project, net_name, subnet_name, router_name, public_net_name):
+
+    router = cloud.get_router(router_name, filters={"project_id": project.id})
+    attach = False
+
+    if not router:
+        public_network_id = cloud.get_network(public_net_name).id
+        logging.info("%s - create router (%s)" % (project.name, router_name))
+
+        if not CONF.dry_run:
+            router = cloud.create_router(
+                name=router_name,
+                ext_gateway_net_id=public_network_id,
+                enable_snat=True,
+                project_id=project.id
+            )
+        attach = True
+
+    subnet = create_network(project, net_name, subnet_name, public_net_name)
 
     if attach:
         logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
