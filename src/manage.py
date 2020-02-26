@@ -176,7 +176,7 @@ def create_network(project, net_name, subnet_name, public_net_name):
             )
         attach = True
 
-    return subnet
+    return (attach, subnet)
 
 
 def create_network_with_router(project, net_name, subnet_name, router_name, public_net_name):
@@ -197,7 +197,7 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
             )
         attach = True
 
-    subnet = create_network(project, net_name, subnet_name, public_net_name)
+    attach, subnet = create_network(project, net_name, subnet_name, public_net_name)
 
     if attach:
         logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
