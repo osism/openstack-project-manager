@@ -136,6 +136,11 @@ def create_network_resources(project, domain):
             create_service_network(project, net_name, subnet_name)
             add_service_network(project, net_name)
 
+    if "show_public_network" in project and project.show_public_network.lower() in ["true", "True", "yes", "Yes"]:
+        public_net_name = "public"
+
+        add_external_network(project, public_net_name)
+
 
 def add_service_network(project, net_name):
 
