@@ -156,7 +156,7 @@ def add_service_network(project, net_name):
         if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 0:
             logging.info("%s - create service rbac policy (%s)" % (project.name, net_name))
             neutron.create_rbac_policy({'rbac_policy': {
-                'target_tenant': project_service,
+                'target_tenant': project_service.id,
                 'action': 'access_as_shared',
                 'object_type': 'network',
                 'object_id': net.id
