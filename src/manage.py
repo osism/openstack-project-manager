@@ -153,7 +153,7 @@ def add_service_network(project, net_name):
             'fields': 'id'
         })
 
-        if not CONF.dry_run and len(rbac_policies) == 0:
+        if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 0:
             logging.info("%s - create service rbac policy (%s)" % (project.name, net_name))
             neutron.create_rbac_policy({'rbac_policy': {
                 'target_tenant': project_service,
@@ -180,7 +180,7 @@ def add_external_network(project, public_net_name):
             'fields': 'id'
         })
 
-        if not CONF.dry_run and len(rbac_policies) == 0:
+        if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 0:
             logging.info("%s - create external rbac policy (%s)" % (project.name, public_net_name))
             neutron.create_rbac_policy({'rbac_policy': {
                 'target_tenant': project.id,
