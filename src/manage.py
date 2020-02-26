@@ -136,7 +136,7 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
         pass
 
     if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
-        logging.info("%s - it's a service project, network resources are not created" % (project.name, router_name))
+        logging.info("%s - it's a service project, network resources are not created" % project.name)
 
     else:
 
