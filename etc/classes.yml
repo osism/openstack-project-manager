@@ -17,6 +17,7 @@ default:
     server_groups: 0
   network:
     firewall: 0
+    firewall_group: 0
     firewall_policy: 0
     firewall_rule: 0
     floatingip: 0
@@ -60,6 +61,7 @@ service:
     server_groups: 0
   network:
     firewall: 256
+    firewall_group: 256
     firewall_policy: 256
     firewall_rule: 512
     floatingip: 0
@@ -103,6 +105,7 @@ basic:
     server_groups: 4
   network:
     firewall: 0
+    firewall_group: 0
     firewall_policy: 0
     firewall_rule: 0
     floatingip: 4
