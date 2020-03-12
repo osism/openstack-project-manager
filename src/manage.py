@@ -49,7 +49,12 @@ def check_quota(project, cloud):
     elif "router" in quotaclasses[project.quotaclass]["network"]:
         quota_router = quotaclasses[project.quotaclass]["network"]["router"]
     else:
-        quota_router = 1
+        quota_router = 0
+        if "has_public_network" in project and project.has_public_network.lower() in ["true", "True", "yes", "Yes"]:
+            quota_router = quota_router + 1
+
+        if "domain_name" != "default" and "has_domain_network" in project and project.has_domain_network.lower() in ["true", "True", "yes", "Yes"]:
+            quota_router = quota_router + 1
 
     logging.info("%s - check network quota" % project.name)
     quotanetwork = cloud.get_network_quotas(project.id)
