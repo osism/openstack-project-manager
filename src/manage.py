@@ -46,10 +46,9 @@ def check_quota(project, cloud):
 
     if "quota_router" in project:
         quota_router = int(project.quota_router)
-    elif "router" in quotaclasses[project.quotaclass]["network"]:
-        quota_router = quotaclasses[project.quotaclass]["network"]["router"]
     else:
-        quota_router = 0
+        quota_router = quotaclasses[project.quotaclass]["network"]["router"]
+
         if "has_public_network" in project and project.has_public_network.lower() in ["true", "True", "yes", "Yes"]:
             quota_router = quota_router + 1
 

@@ -115,7 +115,7 @@ basic:
     pool: 1
     port: 20
     rbac_policy: 10
-    router: 1
+    router: 0
     security_group: 5
     security_group_rule: 20
     subnet: 2
