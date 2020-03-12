@@ -44,13 +44,26 @@ def check_quota(project, cloud):
     else:
         multiplier_network = multiplier
 
+    if "quota_router" in project:
+        quota_router = int(project.quota_router)
+    elif "router" in quotaclasses[project.quotaclass]["network"]:
+        quota_router = quotaclasses[project.quotaclass]["network"]
+    else:
+        quota_router = 1
+
     logging.info("%s - check network quota" % project.name)
     quotanetwork = cloud.get_network_quotas(project.id)
     for key in quotaclasses[project.quotaclass]["network"]:
-        if quotaclasses[project.quotaclass]["network"][key] * multiplier_network != quotanetwork[key]:
-            logging.info("%s - network[%s] = %d != %d" % (project.name, key, quotaclasses[project.quotaclass]["network"][key] * multiplier_network, quotanetwork[key]))
+
+        if key == "router":
+            quota_should_be = quota_router
+        else:
+            quota_should_be = quotaclasses[project.quotaclass]["network"][key] * multiplier_network
+
+        if quota_should_be != quotanetwork[key]:
+            logging.info("%s - network[%s] = %d != %d" % (project.name, key, quota_should_be, quotanetwork[key]))
             if not CONF.dry_run:
-                cloud.set_network_quotas(project.id, **{key: quotaclasses[project.quotaclass]["network"][key] * multiplier_network})
+                cloud.set_network_quotas(project.id, **{key: quota_should_be})
 
     logging.info("%s - check compute quota" % project.name)
     quotacompute = cloud.get_compute_quotas(project.id)
@@ -59,10 +72,12 @@ def check_quota(project, cloud):
             tmultiplier = 1
         else:
             tmultiplier = multiplier_compute
-        if quotaclasses[project.quotaclass]["compute"][key] * tmultiplier != quotacompute[key]:
-            logging.info("%s - compute[%s] = %d != %d" % (project.name, key, quotaclasses[project.quotaclass]["compute"][key] * tmultiplier, quotacompute[key]))
+
+        quota_should_be = quotaclasses[project.quotaclass]["compute"][key] * tmultiplier
+        if quota_should_be != quotacompute[key]:
+            logging.info("%s - compute[%s] = %d != %d" % (project.name, key, quota_should_be, quotacompute[key]))
             if not CONF.dry_run:
-                cloud.set_compute_quotas(project.id, **{key: quotaclasses[project.quotaclass]["compute"][key] * tmultiplier})
+                cloud.set_compute_quotas(project.id, **{key: quota_should_be})
 
     logging.info("%s - check volume quota" % project.name)
     quotavolume = cloud.get_volume_quotas(project.id)
@@ -71,10 +86,12 @@ def check_quota(project, cloud):
             tmultiplier = 1
         else:
             tmultiplier = multiplier_storage
-        if quotaclasses[project.quotaclass]["volume"][key] * tmultiplier != quotavolume[key]:
-            logging.info("%s - volume[%s] = %d != %d" % (project.name, key, quotaclasses[project.quotaclass]["volume"][key] * tmultiplier, quotavolume[key]))
+
+        quota_should_be = quotaclasses[project.quotaclass]["volume"][key] * tmultiplier
+        if quota_should_be != quotavolume[key]:
+            logging.info("%s - volume[%s] = %d != %d" % (project.name, key, quota_should_be, quotavolume[key]))
             if not CONF.dry_run:
-                cloud.set_volume_quotas(project.id, **{key: quotaclasses[project.quotaclass]["volume"][key] * tmultiplier})
+                cloud.set_volume_quotas(project.id, **{key: quota_should_be})
 
 
 def create_network_resources(project, domain):
