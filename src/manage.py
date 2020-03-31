@@ -22,6 +22,10 @@ CONF(sys.argv[1:], project=PROJECT_NAME)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 
 
+def check_bool(project, param):
+    return param in project and str(project.get(param)) in ["true", "True", "yes", "Yes"]
+
+
 def check_quota(project, cloud):
 
     if "quotamultiplier" in project:
@@ -49,10 +53,13 @@ def check_quota(project, cloud):
     else:
         quota_router = quotaclasses[project.quotaclass]["network"]["router"]
 
-        if "has_public_network" in project and project.has_public_network.lower() in ["true", "True", "yes", "Yes"]:
+        if (check_bool(project, "has_public_network") and
+                not check_bool(project, "is_servivce_project")):
             quota_router = quota_router + 1
 
-        if "domain_name" != "default" and "has_domain_network" in project and project.has_domain_network.lower() in ["true", "True", "yes", "Yes"]:
+        if ("domain_name" != "default" and
+                check_bool(project, "has_domain_network") and
+                not check_bool(project, "is_servivce_project")):
             quota_router = quota_router + 1
 
     logging.info("%s - check network quota" % project.name)
@@ -116,7 +123,7 @@ def create_network_resources(project, domain):
     domain_name = domain.name.lower()
     project_name = project.name.lower()
 
-    if "has_public_network" in project and project.has_public_network.lower() in ["true", "True", "yes", "Yes"]:
+    if check_bool(project, "has_public_network"):
         logging.info("%s - check public network resources" % project.name)
 
         if "public_network" in project:
@@ -130,12 +137,12 @@ def create_network_resources(project, domain):
 
         add_external_network(project, public_net_name)
 
-        if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
+        if check_bool(project, "is_service_project"):
             logging.info("%s - it's a service project, network resources are not created" % project.name)
         else:
             create_network_with_router(project, net_name, subnet_name, router_name, public_net_name)
 
-    if "domain_name" != "default" and "has_domain_network" in project and project.has_domain_network.lower() in ["true", "True", "yes", "Yes"]:
+    if "domain_name" != "default" and check_bool(project, "has_domain_network"):
         logging.info("%s - check domain network resources" % project.name)
 
         if "domain_network" in project:
@@ -149,12 +156,12 @@ def create_network_resources(project, domain):
 
         add_external_network(project, public_net_name)
 
-        if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
+        if check_bool(project, "is_service_project"):
             logging.info("%s - it's a service project, network resources are not created" % project.name)
         else:
             create_network_with_router(project, net_name, subnet_name, router_name, public_net_name)
 
-    if "has_shared_router" in project and project.has_shared_router.lower() in ["true", "True", "yes", "Yes"]:
+    if check_bool(project, "has_shared_router"):
 
         if "public_network" in project:
             public_net_name = project.public_network
@@ -164,13 +171,13 @@ def create_network_resources(project, domain):
         net_name = "net-to-%s-%s" % (public_net_name, project_name)
         subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
 
-        if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
+        if check_bool(project, "is_service_project"):
             logging.info("%s - it's a service project, network resources are not created" % project.name)
         else:
             create_service_network(project, net_name, subnet_name)
             add_service_network(project, net_name)
 
-    if "show_public_network" in project and project.show_public_network.lower() in ["true", "True", "yes", "Yes"]:
+    if check_bool(project, "show_public_network"):
         if "public_network" in project:
             public_net_name = project.public_network
         else:
