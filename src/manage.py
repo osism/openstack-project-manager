@@ -366,7 +366,7 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
     attach_subnet, subnet = create_network(project, net_name, subnet_name)
 
     if attach_router or attach_subnet:
-        logging.info("%s - attach subnet (%s) to router (%s)" % (subnet_name, router_name))
+        logging.info("%s - attach subnet (%s) to router (%s)" % (project.name, subnet_name, router_name))
         if not CONF.dry_run:
             cloud.add_router_interface(router, subnet_id=subnet.id)
 
