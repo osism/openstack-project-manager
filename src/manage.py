@@ -178,6 +178,7 @@ def create_network_resources(project, domain):
             add_service_network(project, net_name)
 
     if check_bool(project, "show_public_network"):
+
         if "public_network" in project:
             public_net_name = project.public_network
         else:
@@ -185,11 +186,29 @@ def create_network_resources(project, domain):
 
         add_external_network(project, public_net_name)
 
+    if not check_bool(project, "show_public_network") and not check_bool(project, "has_public_network"):
+
+        if "public_network" in project:
+            public_net_name = project.public_network
+        else:
+            public_net_name = "public"
+
+        del_external_network(project, public_net_name)
+
+    if not check_bool(project, "has_domain_network"):
+
+        if "domain_network" in project:
+            public_net_name = project.domain_network
+        else:
+            public_net_name = "%s-public" % domain_name
+
+        del_external_network(project, public_net_name)
+
 
 def add_service_network(project, net_name):
 
     try:
-        logging.info("%s - check service rbac policy (%s)" % (project.name, net_name))
+        logging.info("%s - check if service rbac policy must be created (%s)" % (project.name, net_name))
         net = cloud.get_network(net_name)
         rbac_policies = neutron.list_rbac_policies(**{
             'target_tenant': project.id,
@@ -198,6 +217,9 @@ def add_service_network(project, net_name):
             'object_id': net.id,
             'fields': 'id'
         })
+
+        if len(rbac_policies["rbac_policies"]) == 0:
+            logging.info("%s - service rbac policy has to be created (%s)" % (project.name, net_name))
 
         if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 0:
             logging.info("%s - create service rbac policy (%s)" % (project.name, net_name))
@@ -215,7 +237,7 @@ def add_service_network(project, net_name):
 def add_external_network(project, public_net_name):
 
     try:
-        logging.info("%s - check external rbac policy (%s)" % (project.name, public_net_name))
+        logging.info("%s - check if external rbac policy must be created (%s)" % (project.name, public_net_name))
 
         public_net = cloud.get_network(public_net_name)
         rbac_policies = neutron.list_rbac_policies(**{
@@ -226,14 +248,43 @@ def add_external_network(project, public_net_name):
             'fields': 'id'
         })
 
+        if len(rbac_policies["rbac_policies"]) == 0:
+            logging.info("%s - external rbac policy has to be created (%s)" % (project.name, public_net_name))
+
         if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 0:
-            logging.info("%s - create external rbac policy (%s)" % (project.name, public_net_name))
+            logging.info("%s - create rbac policy (%s)" % (project.name, public_net_name))
             neutron.create_rbac_policy({'rbac_policy': {
                 'target_tenant': project.id,
                 'action': 'access_as_external',
                 'object_type': 'network',
                 'object_id': public_net.id
             }})
+
+    except neutronclient.common.exceptions.Conflict:
+        pass
+
+
+def del_external_network(project, public_net_name):
+
+    try:
+        logging.info("%s - check if external rbac policy must be deleted (%s)" % (project.name, public_net_name))
+
+        public_net = cloud.get_network(public_net_name)
+        rbac_policies = neutron.list_rbac_policies(**{
+            'target_tenant': project.id,
+            'action': 'access_as_external',
+            'object_type': 'network',
+            'object_id': public_net.id,
+            'fields': 'id'
+        })
+
+        if len(rbac_policies["rbac_policies"]) == 1:
+            logging.info("%s - external rbac policy has to be deleted (%s)" % (project.name, public_net_name))
+
+        if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 1:
+            logging.info("%s - delete external rbac policy (%s)" % (project.name, public_net_name))
+            rbac_policy = rbac_policies["rbac_policies"][0]["id"]
+            neutron.delete_rbac_policy(rbac_policy)
 
     except neutronclient.common.exceptions.Conflict:
         pass
