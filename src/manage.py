@@ -119,10 +119,14 @@ def create_network_resources(project, domain):
     if "has_public_network" in project and project.has_public_network.lower() in ["true", "True", "yes", "Yes"]:
         logging.info("%s - check public network resources" % project.name)
 
-        net_name = "net-to-public-%s" % project_name
-        public_net_name = "public"
-        router_name = "router-to-public-%s" % project_name
-        subnet_name = "subnet-to-public-%s" % project_name
+        if "public_network" in project:
+            public_net_name = project.public_network
+        else:
+            public_net_name = "public"
+
+        net_name = "net-to-%s-%s" % (public_net_name, project_name)
+        router_name = "router-to-%s-%s" % (public_net_name, project_name)
+        subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
 
         add_external_network(project, public_net_name)
 
@@ -134,10 +138,14 @@ def create_network_resources(project, domain):
     if "domain_name" != "default" and "has_domain_network" in project and project.has_domain_network.lower() in ["true", "True", "yes", "Yes"]:
         logging.info("%s - check domain network resources" % project.name)
 
-        net_name = "net-to-%s-public-%s" % (domain_name, project_name)
-        public_net_name = "%s-public" % domain_name
-        router_name = "router-to-%s-public-%s" % (domain_name, project_name)
-        subnet_name = "subnet-to-%s-public-%s" % (domain_name, project_name)
+        if "domain_network" in project:
+            public_net_name = project.domain_network
+        else:
+            public_net_name = "%s-public" % domain_name
+
+        net_name = "net-to-%s-%s" % (public_net_name, project_name)
+        router_name = "router-to-%s-%s" % (public_net_name, project_name)
+        subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
 
         add_external_network(project, public_net_name)
 
@@ -148,8 +156,13 @@ def create_network_resources(project, domain):
 
     if "has_shared_router" in project and project.has_shared_router.lower() in ["true", "True", "yes", "Yes"]:
 
-        net_name = "net-to-public-%s" % project_name
-        subnet_name = "subnet-to-public-%s" % project_name
+        if "public_network" in project:
+            public_net_name = project.public_network
+        else:
+            public_net_name = "public"
+
+        net_name = "net-to-%s-%s" % (public_net_name, project_name)
+        subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
 
         if "is_service_project" in project and project.is_service_project.lower() in ["true", "True", "yes", "Yes"]:
             logging.info("%s - it's a service project, network resources are not created" % project.name)
@@ -158,7 +171,10 @@ def create_network_resources(project, domain):
             add_service_network(project, net_name)
 
     if "show_public_network" in project and project.show_public_network.lower() in ["true", "True", "yes", "Yes"]:
-        public_net_name = "public"
+        if "public_network" in project:
+            public_net_name = project.public_network
+        else:
+            public_net_name = "public"
 
         add_external_network(project, public_net_name)
 
