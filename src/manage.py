@@ -127,8 +127,10 @@ def create_network_resources(project, domain):
         logging.info("%s - check public network resources" % project.name)
 
         if "public_network" in project:
+            availability_zone = "south-2"
             public_net_name = project.public_network
         else:
+            availability_zone = "south-1"
             public_net_name = "public"
 
         net_name = "net-to-%s-%s" % (public_net_name, project_name)
@@ -140,14 +142,16 @@ def create_network_resources(project, domain):
         if check_bool(project, "is_service_project"):
             logging.info("%s - it's a service project, network resources are not created" % project.name)
         else:
-            create_network_with_router(project, net_name, subnet_name, router_name, public_net_name)
+            create_network_with_router(project, net_name, subnet_name, router_name, public_net_name, availability_zone)
 
     if "domain_name" != "default" and check_bool(project, "has_domain_network"):
         logging.info("%s - check domain network resources" % project.name)
 
         if "domain_network" in project:
+            availability_zone = "south-2"
             public_net_name = project.domain_network
         else:
+            availability_zone = "south-1"
             public_net_name = "%s-public" % domain_name
 
         net_name = "net-to-%s-%s" % (public_net_name, project_name)
@@ -159,13 +163,15 @@ def create_network_resources(project, domain):
         if check_bool(project, "is_service_project"):
             logging.info("%s - it's a service project, network resources are not created" % project.name)
         else:
-            create_network_with_router(project, net_name, subnet_name, router_name, public_net_name)
+            create_network_with_router(project, net_name, subnet_name, router_name, public_net_name, availability_zone)
 
     if check_bool(project, "has_shared_router"):
 
         if "public_network" in project:
+            availability_zone = "south-2"
             public_net_name = project.public_network
         else:
+            availability_zone = "south-1"
             public_net_name = "public"
 
         net_name = "net-to-%s-%s" % (public_net_name, project_name)
@@ -174,7 +180,7 @@ def create_network_resources(project, domain):
         if check_bool(project, "is_service_project"):
             logging.info("%s - it's a service project, network resources are not created" % project.name)
         else:
-            create_service_network(project, net_name, subnet_name)
+            create_service_network(project, net_name, subnet_name, availability_zone)
             add_service_network(project, net_name)
 
     if check_bool(project, "show_public_network"):
@@ -290,7 +296,7 @@ def del_external_network(project, public_net_name):
         pass
 
 
-def create_service_network(project, net_name, subnet_name):
+def create_service_network(project, net_name, subnet_name, availability_zone):
 
     domain = cloud.get_domain(name_or_id=project.domain_id)
     project_service = cloud.get_project(name_or_id="service-%s" % domain.name)
@@ -301,7 +307,7 @@ def create_service_network(project, net_name, subnet_name):
         logging.info("%s - create service network (%s)" % (project.name, net_name))
 
         if not CONF.dry_run:
-            net = cloud.create_network(net_name, project_id=project_service.id)
+            net = cloud.create_network(net_name, project_id=project_service.id, availability_zone_hints=[availability_zone])
 
     subnet = cloud.get_subnet(subnet_name, filters={"project_id": project_service.id})
     if not subnet:
@@ -317,7 +323,7 @@ def create_service_network(project, net_name, subnet_name):
             )
 
 
-def create_network(project, net_name, subnet_name):
+def create_network(project, net_name, subnet_name, availability_zone):
 
     attach = False
     net = cloud.get_network(net_name, filters={"project_id": project.id})
@@ -326,7 +332,7 @@ def create_network(project, net_name, subnet_name):
         logging.info("%s - create network (%s)" % (project.name, net_name))
 
         if not CONF.dry_run:
-            net = cloud.create_network(net_name, project_id=project.id)
+            net = cloud.create_network(net_name, project_id=project.id, availability_zone_hints=[availability_zone])
 
     subnet = cloud.get_subnet(subnet_name, filters={"project_id": project.id})
     if not subnet:
@@ -345,7 +351,7 @@ def create_network(project, net_name, subnet_name):
     return (attach, subnet)
 
 
-def create_network_with_router(project, net_name, subnet_name, router_name, public_net_name):
+def create_network_with_router(project, net_name, subnet_name, router_name, public_net_name, availability_zone):
 
     attach_router = False
     router = cloud.get_router(router_name, filters={"project_id": project.id})
@@ -359,11 +365,12 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
                 name=router_name,
                 ext_gateway_net_id=public_network_id,
                 enable_snat=True,
-                project_id=project.id
+                project_id=project.id,
+                availability_zone_hints=[availability_zone]
             )
         attach_router = True
 
-    attach_subnet, subnet = create_network(project, net_name, subnet_name)
+    attach_subnet, subnet = create_network(project, net_name, subnet_name, availability_zone)
 
     if attach_router or attach_subnet:
         logging.info("%s - attach subnet (%s) to router (%s)" % (project.name, subnet_name, router_name))
