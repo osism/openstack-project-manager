@@ -238,6 +238,8 @@ def add_service_network(project, net_name):
 
     except neutronclient.common.exceptions.Conflict:
         pass
+    except AttributeError:
+        pass
 
 
 def add_external_network(project, public_net_name):
@@ -268,6 +270,8 @@ def add_external_network(project, public_net_name):
 
     except neutronclient.common.exceptions.Conflict:
         pass
+    except AttributeError:
+        pass
 
 
 def del_external_network(project, public_net_name):
@@ -293,6 +297,8 @@ def del_external_network(project, public_net_name):
             neutron.delete_rbac_policy(rbac_policy)
 
     except neutronclient.common.exceptions.Conflict:
+        pass
+    except AttributeError:
         pass
 
 

@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-
-# FIXME(berendt): use python3
-
 import random
 import string
 import sys
@@ -10,20 +6,22 @@ from oslo_config import cfg
 import os_client_config
 import openstack
 
-PROJECT_NAME = 'create-test-project'
+PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
 opts = [
   cfg.BoolOpt('random', help='Generate random names', default=False),
-  cfg.IntOpt('quotamultiplier', help='Quota multiplier', default='1'),
-  cfg.IntOpt('quotamultiplier_compute', help='Quota multiplier compute', default=None),
-  cfg.IntOpt('quotamultiplier_network', help='Quota multiplier network', default=None),
-  cfg.IntOpt('quotamultiplier_storage', help='Quota multiplier storage', default=None),
+  cfg.IntOpt('quota_router', help='Quota router', default=None),
+  cfg.IntOpt('quota_multiplier', help='Quota multiplier', default='1'),
+  cfg.IntOpt('quota_multiplier_compute', help='Quota multiplier compute', default=None),
+  cfg.IntOpt('quota_multiplier_network', help='Quota multiplier network', default=None),
+  cfg.IntOpt('quota_multiplier_storage', help='Quota multiplier storage', default=None),
   cfg.StrOpt('cloud', help='Managed cloud', default='service'),
   cfg.StrOpt('domain', help='Domain', default='orange'),
   cfg.StrOpt('name', help='Projectname', default='test-123'),
-  cfg.StrOpt('owner', help='Owner of the project', default='operations@betacloud.io'),
+  cfg.StrOpt('owner', help='Owner of the project', default='operations@betacloud.de'),
   cfg.StrOpt('password', help='Password', default=None),
-  cfg.StrOpt('quotaclass', help='Quota class', default='basic')
+  cfg.StrOpt('public_network', help='Public network', default='external'),
+  cfg.StrOpt('quota_class', help='Quota class', default='basic')
 ]
 CONF.register_cli_opts(opts)
 
@@ -51,17 +49,22 @@ if not project:
 # FIXME(berendt): use openstacksdk
 keystone = os_client_config.make_client('identity', cloud=CONF.cloud)
 
-keystone.projects.update(project=project.id, quotaclass=CONF.quotaclass)
-keystone.projects.update(project=project.id, quotamultiplier=CONF.quotamultiplier)
-if CONF.quotamultiplier_compute:
-    keystone.projects.update(project=project.id, quotamultiplier_compute=CONF.quotamultiplier_compute)
-if CONF.quotamultiplier_network:
-    keystone.projects.update(project=project.id, quotamultiplier_network=CONF.quotamultiplier_network)
-if CONF.quotamultiplier_storage:
-    keystone.projects.update(project=project.id, quotamultiplier_storage=CONF.quotamultiplier_storage)
+keystone.projects.update(project=project.id, quotaclass=CONF.quota_class)
+keystone.projects.update(project=project.id, quotamultiplier=CONF.quota_multiplier)
+if CONF.quota_multiplier_compute:
+    keystone.projects.update(project=project.id, quotamultiplier_compute=CONF.quota_multiplier_compute)
+if CONF.quota_multiplier_network:
+    keystone.projects.update(project=project.id, quotamultiplier_network=CONF.quota_multiplier_network)
+if CONF.quota_multiplier_storage:
+    keystone.projects.update(project=project.id, quotamultiplier_storage=CONF.quota_multiplier_storage)
+if CONF.quota_router:
+    keystone.projects.update(project=project.id, quota_router=CONF.quota_router)
 
 keystone.projects.update(project=project.id, has_domain_network="False")
-keystone.projects.update(project=project.id, has_public_network="True")
+keystone.projects.update(project=project.id, has_shared_router="False")
+keystone.projects.update(project=project.id, has_public_network="False")
+keystone.projects.update(project=project.id, show_public_network="True")
+keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
 keystone.projects.update(project=project.id, owner=CONF.owner)
 
