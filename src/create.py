@@ -14,20 +14,20 @@ DEFAULT_ROLES = [
 PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
 opts = [
-  cfg.BoolOpt('create_user', help='Create user', default=True),
+  cfg.BoolOpt('create-user', help='Create user', default=True),
   cfg.BoolOpt('random', help='Generate random names', default=False),
-  cfg.IntOpt('quota_router', help='Quota router', default=None),
-  cfg.IntOpt('quota_multiplier', help='Quota multiplier', default='1'),
-  cfg.IntOpt('quota_multiplier_compute', help='Quota multiplier compute', default=None),
-  cfg.IntOpt('quota_multiplier_network', help='Quota multiplier network', default=None),
-  cfg.IntOpt('quota_multiplier_storage', help='Quota multiplier storage', default=None),
-  cfg.StrOpt('cloud', help='Managed cloud', default='service'),
+  cfg.IntOpt('quota-router', help='Quota router', default=None),
+  cfg.IntOpt('quota-multiplier', help='Quota multiplier', default='1'),
+  cfg.IntOpt('quota-multiplier-compute', help='Quota multiplier compute', default=None),
+  cfg.IntOpt('quota-multiplier-network', help='Quota multiplier network', default=None),
+  cfg.IntOpt('quota-multiplier-storage', help='Quota multiplier storage', default=None),
+  cfg.StrOpt('cloud', help='Ma-aged cloud', default='service'),
   cfg.StrOpt('domain', help='Domain', default='orange'),
   cfg.StrOpt('name', help='Projectname', default='test-123'),
   cfg.StrOpt('owner', help='Owner of the project', default='operations@betacloud.de'),
   cfg.StrOpt('password', help='Password', default=None),
-  cfg.StrOpt('public_network', help='Public network', default='external'),
-  cfg.StrOpt('quota_class', help='Quota class', default='basic')
+  cfg.StrOpt('public-network', help='Public network', default='external'),
+  cfg.StrOpt('quota-class', help='Quota class', default='basic')
 ]
 CONF.register_cli_opts(opts)
 
