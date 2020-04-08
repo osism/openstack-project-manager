@@ -9,6 +9,7 @@ import openstack
 PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
 opts = [
+  cfg.BoolOpt('create_user', help='Create user', default=True),
   cfg.BoolOpt('random', help='Generate random names', default=False),
   cfg.IntOpt('quota_router', help='Quota router', default=None),
   cfg.IntOpt('quota_multiplier', help='Quota multiplier', default='1'),
@@ -68,17 +69,20 @@ keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
 keystone.projects.update(project=project.id, owner=CONF.owner)
 
-user = conn.identity.find_user(name, domain_id=domain.id)
-if not user:
-    user = conn.create_user(name=name, password=password, default_project=project, domain_id=domain.id, email=CONF.owner)
-else:
-    conn.update_user(user, password=password)
+if CONF.create_user:
+    user = conn.identity.find_user(name, domain_id=domain.id)
+    if not user:
+        user = conn.create_user(name=name, password=password, default_project=project, domain_id=domain.id, email=CONF.owner)
+    else:
+        conn.update_user(user, password=password)
 
-# FIXME(berendt): check existing assignments
-conn.grant_role("_member_", user=user.id, project=project.id, domain=domain.id)
-conn.grant_role("heat_stack_owner", user=user.id, project=project.id, domain=domain.id)
+    # FIXME(berendt): check existing assignments
+    conn.grant_role("_member_", user=user.id, project=project.id, domain=domain.id)
+    conn.grant_role("heat_stack_owner", user=user.id, project=project.id, domain=domain.id)
 
 print("domain: %s (%s)" % (CONF.domain, domain.id))
 print("project: %s (%s)" % (name, project.id))
-print("user: %s (%s)" % (name, user.id))
-print("password: " + password)
+
+if CONF.create_user:
+    print("user: %s (%s)" % (name, user.id))
+    print("password: " + password)
