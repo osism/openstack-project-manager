@@ -15,6 +15,9 @@ PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
 opts = [
   cfg.BoolOpt('create-user', help='Create user', default=True),
+  cfg.BoolOpt('has-domain-network', help='Has domain network infrastructure', default=False),
+  cfg.BoolOpt('has-public-network', help='Has public network infrastructure', default=False),
+  cfg.BoolOpt('has-shared-router', help='Has shared router', default=False),
   cfg.BoolOpt('random', help='Generate random names', default=False),
   cfg.IntOpt('quota-router', help='Quota router', default=None),
   cfg.IntOpt('quota-multiplier', help='Quota multiplier', default='1'),
@@ -66,10 +69,10 @@ if CONF.quota_multiplier_storage:
 if CONF.quota_router:
     keystone.projects.update(project=project.id, quota_router=CONF.quota_router)
 
-keystone.projects.update(project=project.id, has_domain_network="False")
-keystone.projects.update(project=project.id, has_shared_router="False")
-keystone.projects.update(project=project.id, has_public_network="False")
-keystone.projects.update(project=project.id, show_public_network="True")
+keystone.projects.update(project=project.id, has_domain_network=str(CONF.has_domain_network))
+keystone.projects.update(project=project.id, has_shared_router=str(CONF.has_shared_router))
+keystone.projects.update(project=project.id, has_public_network=str(CONF.has_public_network))
+keystone.projects.update(project=project.id, show_public_network=str(CONF.has_public_network or CONF.has_shared_router))
 keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
 keystone.projects.update(project=project.id, owner=CONF.owner)
