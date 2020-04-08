@@ -6,6 +6,11 @@ from oslo_config import cfg
 import os_client_config
 import openstack
 
+DEFAULT_ROLES = [
+    "heat_stack_owner",
+    "_member_"
+]
+
 PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
 opts = [
@@ -77,8 +82,8 @@ if CONF.create_user:
         conn.update_user(user, password=password)
 
     # FIXME(berendt): check existing assignments
-    conn.grant_role("_member_", user=user.id, project=project.id, domain=domain.id)
-    conn.grant_role("heat_stack_owner", user=user.id, project=project.id, domain=domain.id)
+    for role in DEFAULT_ROLES:
+        conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
 
 print("domain: %s (%s)" % (CONF.domain, domain.id))
 print("project: %s (%s)" % (name, project.id))
