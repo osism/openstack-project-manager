@@ -12,6 +12,7 @@ CONF = cfg.CONF
 opts = [
     cfg.BoolOpt('dry-run', help='Do not really do anything', default=False),
     cfg.StrOpt('classes', help='Path to the classes.yml file', default='etc/classes.yml'),
+    cfg.StrOpt('endpoints', help='Path to the endpoints.yml file', default='etc/endpoints.yml'),
     cfg.StrOpt('cloud', help='Cloud name in clouds.yaml', default='service'),
     cfg.StrOpt('domain', help='Domain to be managed'),
     cfg.StrOpt('name', help='Project to be managed'),
@@ -384,6 +385,38 @@ def create_network_with_router(project, net_name, subnet_name, router_name, publ
             cloud.add_router_interface(router, subnet_id=subnet.id)
 
 
+def check_endpoints(project):
+
+    if "endpoints" in project:
+        endpoints = project.endpoints.split(",")
+    else:
+        endpoints = ["default", "orchestration"]
+
+    assigned_endpoint_groups = [
+        x.name for x in KEYSTONE.endpoint_filter.list_endpoint_groups_for_project(project=project.id)
+    ]
+
+    for endpoint in [x for e in endpoints for x in ENDPOINTS[e]]:
+
+        if endpoint == "keystone":
+            interfaces = ["internal", "public", "admin"]
+        else:
+            interfaces = ["internal", "public"]
+
+        for interface in interfaces:
+            endpoint_group_name = "%s-%s" % (endpoint, interface)
+
+            if endpoint_group_name not in assigned_endpoint_groups:
+                logging.info("%s - add endpoint %s (%s)" % (project.name, endpoint, interface))
+
+                if not CONF.dry_run:
+                    endpoint_group = existing_endpoint_groups[endpoint_group_name]
+                    KEYSTONE.endpoint_filter.add_endpoint_group_to_project(
+                        endpoint_group=endpoint_group.id,
+                        project=project.id
+                    )
+
+
 def process_project(project):
 
     logging.info("%s - project_id = %s, domain_id = %s" % (project.name, project.id, project.domain_id))
@@ -401,6 +434,8 @@ def process_project(project):
             domain = cloud.get_domain(project.domain_id)
             create_network_resources(project, domain)
 
+        check_endpoints(project)
+
 
 # check runtim parameters
 
@@ -413,10 +448,18 @@ if not CONF.name and not CONF.domain:
 with open(CONF.classes, "r") as fp:
     quotaclasses = yaml.load(fp, Loader=yaml.SafeLoader)
 
+with open(CONF.endpoints, "r") as fp:
+    ENDPOINTS = yaml.load(fp, Loader=yaml.SafeLoader)
+
 # get connections
 
 cloud = openstack.connect(cloud=CONF.cloud)
+KEYSTONE = os_client_config.make_client("identity", cloud=CONF.cloud)
 neutron = os_client_config.make_client("network", cloud=CONF.cloud)
+
+# get data
+
+existing_endpoint_groups = {x.name: x for x in KEYSTONE.endpoint_groups.list()}
 
 # check existence of project and/or domain
 

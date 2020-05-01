@@ -1,0 +1,17 @@
+---
+default:
+  - cinderv3
+  - glance
+  - keystone
+  - neutron
+  - nova
+  - placement
+
+orchestration:
+  - heat
+  - magnum
+
+telemetry:
+  - aodh
+  - gnocchi
+  - panko
