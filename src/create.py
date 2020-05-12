@@ -24,7 +24,7 @@ opts = [
   cfg.IntOpt('quota-multiplier-compute', help='Quota multiplier compute', default=None),
   cfg.IntOpt('quota-multiplier-network', help='Quota multiplier network', default=None),
   cfg.IntOpt('quota-multiplier-storage', help='Quota multiplier storage', default=None),
-  cfg.StrOpt('cloud', help='Ma-aged cloud', default='service'),
+  cfg.StrOpt('cloud', help='Managed cloud', default='service'),
   cfg.StrOpt('domain', help='Domain', default='orange'),
   cfg.StrOpt('name', help='Projectname', default='test-123'),
   cfg.StrOpt('owner', help='Owner of the project', default='operations@betacloud.de'),
