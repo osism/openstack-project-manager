@@ -130,7 +130,7 @@ basic:
 
 testbed:
   compute:
-    cores: 16
+    cores: 26
     fixed_ips: 0
     floating_ips: 0
     injected_file_content_bytes: 10240
@@ -139,7 +139,7 @@ testbed:
     instances: 4
     key_pairs: 1
     metadata_items: 128
-    ram: 53248
+    ram: 100000
     security_group_rules: 0
     security_groups: 0
     server_group_members: 0
