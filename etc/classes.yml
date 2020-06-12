@@ -156,17 +156,17 @@ testbed:
     member: 0
     network: 10
     pool: 0
-    port: 50
+    port: 100
     rbac_policy: 0
     router: 1
-    security_group: 6
+    security_group: 10
     security_group_rule: 50
     subnet: 10
     subnetpool: 0
   volume:
     backup_gigabytes: 0
     backups: 0
-    gigabytes: 90
+    gigabytes: 100
     per_volume_gigabytes: 10
     snapshots: 10
-    volumes: 9
+    volumes: 10
