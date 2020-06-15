@@ -139,7 +139,7 @@ testbed:
     instances: 4
     key_pairs: 5
     metadata_items: 128
-    ram: 100000
+    ram: 102400
     security_group_rules: 0
     security_groups: 0
     server_group_members: 0
