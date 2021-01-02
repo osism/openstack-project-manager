@@ -7,8 +7,9 @@ import os_client_config
 import openstack
 
 DEFAULT_ROLES = [
+    "_member_",
     "heat_stack_owner",
-    "_member_"
+    "load-balancer_member"
 ]
 
 PROJECT_NAME = 'openstack-project-manager'
