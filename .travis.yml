@@ -1,9 +1,0 @@
----
-language: python
-
-install:
-  - pip install -r test-requirements.txt
-
-script:
-  - yamllint -c .yamllint.yml etc/classes.yml .yamllint.yml
-  - flake8 --max-line-length=200

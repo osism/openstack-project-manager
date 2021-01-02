@@ -1,7 +1,5 @@
 # openstack-project-manager
 
-[![Build Status](https://travis-ci.org/betacloud/openstack-project-manager.svg?branch=master)](https://travis-ci.org/betacloud/openstack-project-manager)
-
 - [New project](#new-project)
 - [Usage](#usage)
 
