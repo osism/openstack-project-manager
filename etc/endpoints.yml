@@ -9,7 +9,6 @@ default:
 
 orchestration:
   - heat
-  - magnum
 
 telemetry:
   - aodh
