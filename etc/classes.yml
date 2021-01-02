@@ -51,7 +51,7 @@ service:
     injected_file_path_bytes: 255
     injected_files: 5
     instances: 0
-    key_pairs: 0
+    key_pairs: 256
     metadata_items: 128
     ram: 0
     security_group_rules: 0
