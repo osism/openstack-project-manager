@@ -1,10 +1,13 @@
 ---
 default:
+  - barbican
   - cinderv3
+  - designate
   - glance
   - keystone
   - neutron
   - nova
+  - octavia
   - placement
 
 orchestration:
