@@ -1,2 +1,6 @@
 ---
 extends: default
+
+rules:
+  line-length: disable
+  truthy: enable
