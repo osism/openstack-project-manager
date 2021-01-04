@@ -16,9 +16,6 @@ default:
     server_group_members: 0
     server_groups: 0
   network:
-    firewall_group: 0
-    firewall_policy: 0
-    firewall_rule: 0
     floatingip: 0
     network: 0
     port: 0
@@ -53,9 +50,6 @@ service:
     server_group_members: 256
     server_groups: 256
   network:
-    firewall_group: 256
-    firewall_policy: 256
-    firewall_rule: 512
     floatingip: 256
     network: 256
     port: 256
@@ -90,9 +84,6 @@ basic:
     server_group_members: 4
     server_groups: 4
   network:
-    firewall_group: 0
-    firewall_policy: 0
-    firewall_rule: 0
     floatingip: 4
     network: 1
     port: 20
