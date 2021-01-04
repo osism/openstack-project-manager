@@ -44,25 +44,25 @@ default:
 
 service:
   compute:
-    cores: 0
-    fixed_ips: 0
-    floating_ips: 0
+    cores: 256
+    fixed_ips: 256
+    floating_ips: 256
     injected_file_content_bytes: 10240
     injected_file_path_bytes: 255
     injected_files: 5
-    instances: 0
+    instances: 256
     key_pairs: 256
     metadata_items: 128
-    ram: 0
-    security_group_rules: 0
-    security_groups: 0
-    server_group_members: 0
-    server_groups: 0
+    ram: 262144
+    security_group_rules: 256
+    security_groups: 256
+    server_group_members: 256
+    server_groups: 256
   network:
     firewall_group: 256
     firewall_policy: 256
     firewall_rule: 512
-    floatingip: 0
+    floatingip: 256
     healthmonitor: 0
     l7policy: 0
     listener: 0
