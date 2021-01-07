@@ -17,7 +17,7 @@ CONF = cfg.CONF
 opts = [
   cfg.BoolOpt('create-user', help='Create user', default=False),
   cfg.BoolOpt('has-domain-network', help='Has domain network infrastructure', default=False),
-  cfg.BoolOpt('has-public-network', help='Has public network infrastructure', default=False),
+  cfg.BoolOpt('has-public-network', help='Has public network infrastructure', default=true),
   cfg.BoolOpt('has-shared-router', help='Has shared router', default=False),
   cfg.BoolOpt('random', help='Generate random names', default=False),
   cfg.IntOpt('quota-router', help='Quota router', default=None),
