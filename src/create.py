@@ -15,7 +15,7 @@ DEFAULT_ROLES = [
 PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
 opts = [
-  cfg.BoolOpt('create-user', help='Create user', default=True),
+  cfg.BoolOpt('create-user', help='Create user', default=False),
   cfg.BoolOpt('has-domain-network', help='Has domain network infrastructure', default=False),
   cfg.BoolOpt('has-public-network', help='Has public network infrastructure', default=False),
   cfg.BoolOpt('has-shared-router', help='Has shared router', default=False),
