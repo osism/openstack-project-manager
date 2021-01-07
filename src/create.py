@@ -16,8 +16,9 @@ PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
 opts = [
   cfg.BoolOpt('create-user', help='Create user', default=False),
+  cfg.BoolOpt('domain-name-prefix', help='Add domain name as prefix to the project name', default=True),
   cfg.BoolOpt('has-domain-network', help='Has domain network infrastructure', default=False),
-  cfg.BoolOpt('has-public-network', help='Has public network infrastructure', default=true),
+  cfg.BoolOpt('has-public-network', help='Has public network infrastructure', default=True),
   cfg.BoolOpt('has-shared-router', help='Has shared router', default=False),
   cfg.BoolOpt('random', help='Generate random names', default=False),
   cfg.IntOpt('quota-router', help='Quota router', default=None),
@@ -42,6 +43,9 @@ if CONF.random:
     name = "test-" + "".join(random.choice(string.ascii_letters) for x in range(8)).lower()
 else:
     name = CONF.name
+
+if CONF.domain_name_prefix:
+    name = "%s-%s" % (CONF.domain, name)
 
 if not CONF.password:
     password = "".join(random.choice(string.ascii_letters + string.digits) for x in range(16))
