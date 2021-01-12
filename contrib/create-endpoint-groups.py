@@ -1,11 +1,8 @@
 import os
-import sys
 
-import keystoneauth1
 import os_client_config
 import shade
 from tabulate import tabulate
-import yaml
 
 CLOUDNAME = os.environ.get("CLOUD", "service")
 
