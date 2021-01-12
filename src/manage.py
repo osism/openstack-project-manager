@@ -106,6 +106,26 @@ def check_quota(project, cloud):
                 cloud.set_volume_quotas(project.id, **{key: quota_should_be})
 
 
+def create_external_network_rbacs(project, domain):
+    if check_bool(project, "has_public_network"):
+        if "public_network" in project:
+            public_net_name = project.public_network
+        else:
+            public_net_name = "public"
+
+        add_external_network(project, public_net_name)
+
+    if "domain_name" != "default" and check_bool(project, "has_domain_network"):
+        domain_name = domain.name.lower()
+
+        if "domain_network" in project:
+            public_net_name = project.domain_network
+        else:
+            public_net_name = "%s-public" % domain_name
+
+        add_external_network(project, public_net_name)
+
+
 def create_network_resources(project, domain):
 
     if "quotamultiplier" in project:
@@ -138,8 +158,6 @@ def create_network_resources(project, domain):
         router_name = "router-to-%s-%s" % (public_net_name, project_name)
         subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
 
-        add_external_network(project, public_net_name)
-
         if check_bool(project, "is_service_project"):
             logging.info("%s - it's a service project, network resources are not created" % project.name)
         else:
@@ -158,8 +176,6 @@ def create_network_resources(project, domain):
         net_name = "net-to-%s-%s" % (public_net_name, project_name)
         router_name = "router-to-%s-%s" % (public_net_name, project_name)
         subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
-
-        add_external_network(project, public_net_name)
 
         if check_bool(project, "is_service_project"):
             logging.info("%s - it's a service project, network resources are not created" % project.name)
@@ -428,13 +444,14 @@ def process_project(project):
     elif project.quotaclass not in quotaclasses:
         logging.warning("%s - quotaclass %s not defined" % (project.name, project.quotaclass))
     else:
+        domain = cloud.get_domain(project.domain_id)
+
         check_quota(project, cloud)
+        check_endpoints(project)
+        create_external_network_rbacs(project, domain)
 
         if project.quotaclass not in ["default", "service"] and "unmanaged_network_resources" not in project:
-            domain = cloud.get_domain(project.domain_id)
             create_network_resources(project, domain)
-
-        check_endpoints(project)
 
 
 # check runtim parameters
