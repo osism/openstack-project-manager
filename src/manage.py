@@ -430,7 +430,7 @@ def process_project(project):
     else:
         check_quota(project, cloud)
 
-        if project.quotaclass not in ["default", "service"] and "unmanaged_network_resources" no in project:
+        if project.quotaclass not in ["default", "service"] and "unmanaged_network_resources" not in project:
             domain = cloud.get_domain(project.domain_id)
             create_network_resources(project, domain)
 
