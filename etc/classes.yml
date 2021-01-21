@@ -94,8 +94,8 @@ basic:
     subnet: 2
     subnetpool: 1
   volume:
-    backup_gigabytes: 0
-    backups: 0
+    backup_gigabytes: 40
+    backups: 8
     gigabytes: 20
     per_volume_gigabytes: 200
     snapshots: 4
