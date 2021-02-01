@@ -21,6 +21,7 @@ opts = [
   cfg.BoolOpt('has-public-network', help='Has public network infrastructure', default=True),
   cfg.BoolOpt('has-shared-router', help='Has shared router', default=False),
   cfg.BoolOpt('random', help='Generate random names', default=False),
+  cfg.BoolOpt('unmanaged-network-resources', help='Do not manage the network resources', default=False),
   cfg.IntOpt('quota-router', help='Quota router', default=None),
   cfg.IntOpt('quota-multiplier', help='Quota multiplier', default='1'),
   cfg.IntOpt('quota-multiplier-compute', help='Quota multiplier compute', default=None),
@@ -81,6 +82,9 @@ keystone.projects.update(project=project.id, show_public_network=str(CONF.has_pu
 keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
 keystone.projects.update(project=project.id, owner=CONF.owner)
+
+if CONF.unmanaged_network_resources:
+    keystone.projects.update(project=project.id, unmanaged_network_resources='True')
 
 if CONF.create_user:
     user = conn.identity.find_user(name, domain_id=domain.id)
