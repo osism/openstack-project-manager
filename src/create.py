@@ -47,7 +47,7 @@ else:
     name = CONF.name
 
 if CONF.domain_name_prefix:
-    name = f"%{CONF.domain}-{name}"
+    name = f"{CONF.domain}-{name}"
 
 if not CONF.password:
     password = "".join(random.choice(string.ascii_letters + string.digits) for x in range(16))
