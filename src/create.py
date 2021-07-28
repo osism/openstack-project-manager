@@ -47,7 +47,7 @@ else:
     name = CONF.name
 
 if CONF.domain_name_prefix:
-    name = "%s-%s" % (CONF.domain, name)
+    name = f"%{CONF.domain}-{name}"
 
 if not CONF.password:
     password = "".join(random.choice(string.ascii_letters + string.digits) for x in range(16))
@@ -104,9 +104,9 @@ if CONF.assign_admin_user:
         for role in DEFAULT_ROLES:
             conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
 
-print("domain: %s (%s)" % (CONF.domain, domain.id))
-print("project: %s (%s)" % (name, project.id))
+print(f"domain: {CONF.domain} ({domain.id})")
+print(f"project: {name} ({project.id})")
 
 if CONF.create_user:
-    print("user: %s (%s)" % (name, user.id))
-    print("password: " + password)
+    print(f"user: {name} ({user.id})")
+    print(f"password: {password}")
