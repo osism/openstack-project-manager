@@ -15,6 +15,7 @@ DEFAULT_ROLES = [
 PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
 opts = [
+  cfg.BoolOpt('assign-admin-user', help='Assign admin user', default=True),
   cfg.BoolOpt('create-user', help='Create user', default=False),
   cfg.BoolOpt('domain-name-prefix', help='Add domain name as prefix to the project name', default=True),
   cfg.BoolOpt('has-domain-network', help='Has domain network infrastructure', default=False),
@@ -96,6 +97,12 @@ if CONF.create_user:
     # FIXME(berendt): check existing assignments
     for role in DEFAULT_ROLES:
         conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
+
+if CONF.assign_admin_user:
+    user = conn.identity.find_user(f"{CONF.domain}-admin", domain_id=domain.id)
+    if user:
+        for role in DEFAULT_ROLES:
+            conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
 
 print("domain: %s (%s)" % (CONF.domain, domain.id))
 print("project: %s (%s)" % (name, project.id))
