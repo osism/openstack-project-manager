@@ -30,3 +30,9 @@ tox -- --domain DOMAIN --name PROJECT
 ```
 tox -- --domain DOMAIN
 ```
+
+### Create a customised project
+
+```
+tox -e create -- --quota-router=3 --quota-multiplier=2 --domain betacloud --owner foo@osism.tech  --name foo --nodomain-name-prefix
+```
