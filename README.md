@@ -40,5 +40,5 @@ tox -e create -- --quota-router=3 --quota-multiplier=2 --domain betacloud --owne
 ### Create an Okeanos project
 
 ```
-tox -e create -- --domain okeanos --owner okeanos@osism.tech --unmanaged-network-resources --create-user --noassign-admin-user --name test
+tox -e create -- --domain okeanos --owner okeanos@osism.tech --unmanaged-network-resources --create-user --noassign-admin-user --quota-class okeanos --name test
 ```
