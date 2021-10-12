@@ -100,3 +100,37 @@ basic:
     per_volume_gigabytes: 200
     snapshots: 4
     volumes: 4
+
+okeanos:
+  compute:
+    cores: 50
+    fixed_ips: 100
+    floating_ips: 10
+    injected_file_content_bytes: 10240
+    injected_file_path_bytes: 255
+    injected_files: 5
+    instances: 50
+    key_pairs: 5
+    metadata_items: 128
+    ram: 131072
+    security_group_rules: 100
+    security_groups: 100
+    server_group_members: 100
+    server_groups: 100
+  network:
+    floatingip: 10
+    network: 10
+    port: 100
+    rbac_policy: 10
+    router: 0
+    security_group: 100
+    security_group_rule: 100
+    subnet: 10
+    subnetpool: 10
+  volume:
+    backup_gigabytes: 100
+    backups: 10
+    gigabytes: 100
+    per_volume_gigabytes: 200
+    snapshots: 100
+    volumes: 100
