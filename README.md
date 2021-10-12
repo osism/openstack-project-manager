@@ -36,3 +36,9 @@ tox -- --domain DOMAIN
 ```
 tox -e create -- --quota-router=3 --quota-multiplier=2 --domain betacloud --owner foo@osism.tech  --name foo --nodomain-name-prefix
 ```
+
+### Create an Okeanos project
+
+```
+tox -e create -- --domain okeanos --owner okeanos@osism.tech --unmanaged-network-resources --create-user --noassign-admin-user --name test
+```
