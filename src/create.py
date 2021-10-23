@@ -6,6 +6,8 @@ from oslo_config import cfg
 import os_client_config
 import openstack
 
+
+# Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = [
     "_member_",
     "heat_stack_owner",
@@ -14,8 +16,11 @@ DEFAULT_ROLES = [
 
 PROJECT_NAME = 'openstack-project-manager'
 CONF = cfg.CONF
+
+# Available parameters for the CLI
 opts = [
   cfg.BoolOpt('assign-admin-user', help='Assign admin user', default=True),
+  cfg.BoolOpt('create-admin-user', help='Create admin user', default=False),
   cfg.BoolOpt('create-user', help='Create user', default=False),
   cfg.BoolOpt('domain-name-prefix', help='Add domain name as prefix to the project name', default=True),
   cfg.BoolOpt('has-domain-network', help='Has domain network infrastructure', default=False),
@@ -23,11 +28,12 @@ opts = [
   cfg.BoolOpt('has-shared-router', help='Has shared router', default=False),
   cfg.BoolOpt('random', help='Generate random names', default=False),
   cfg.BoolOpt('unmanaged-network-resources', help='Do not manage the network resources', default=False),
-  cfg.IntOpt('quota-router', help='Quota router', default=None),
   cfg.IntOpt('quota-multiplier', help='Quota multiplier', default='1'),
   cfg.IntOpt('quota-multiplier-compute', help='Quota multiplier compute', default=None),
   cfg.IntOpt('quota-multiplier-network', help='Quota multiplier network', default=None),
   cfg.IntOpt('quota-multiplier-storage', help='Quota multiplier storage', default=None),
+  cfg.IntOpt('quota-router', help='Quota router', default=1),
+  cfg.IntOpt('password-length', help='Password length', default=16),
   cfg.StrOpt('cloud', help='Managed cloud', default='service'),
   cfg.StrOpt('domain', help='Domain', default='orange'),
   cfg.StrOpt('name', help='Projectname', default='test-123'),
@@ -39,24 +45,38 @@ opts = [
 CONF.register_cli_opts(opts)
 
 CONF(sys.argv[1:], project=PROJECT_NAME)
+
+
+def generate_password(password_length: int) -> int:
+    return "".join(random.choice(string.ascii_letters + string.digits) for x in range(password_length))
+
+
+# Connect to the OpenStack environment
 conn = openstack.connect(cloud=CONF.cloud)
 
+# Generate a random name in the form abcd-0123
 if CONF.random:
-    name = "test-" + "".join(random.choice(string.ascii_letters) for x in range(8)).lower()
+    part1 = "".join(random.choice(string.ascii_letters) for x in range(4)).lower()
+    part2 = f"{random.randint(0,9999):04d}"
+    name = f"{part1}-{part2}"
 else:
     name = CONF.name
 
+# Add the domain name as a prefix to the name
 if CONF.domain_name_prefix:
     name = f"{CONF.domain}-{name}"
 
+# Generate a random password from all ASCII characters + digits
 if not CONF.password:
-    password = "".join(random.choice(string.ascii_letters + string.digits) for x in range(16))
+    password = generate_password(CONF.password_length)
 else:
     password = CONF.password
 
+# Establish dedicated connection to Keystone service
 # FIXME(berendt): use get_domain
 domain = conn.identity.find_domain(CONF.domain)
 
+# Find or create the project
 # FIXME(berendt): use get_project
 project = conn.identity.find_project(name, domain_id=domain.id)
 if not project:
@@ -65,6 +85,7 @@ if not project:
 # FIXME(berendt): use openstacksdk
 keystone = os_client_config.make_client('identity', cloud=CONF.cloud)
 
+# Set the quota parameters of the project
 keystone.projects.update(project=project.id, quotaclass=CONF.quota_class)
 keystone.projects.update(project=project.id, quotamultiplier=CONF.quota_multiplier)
 if CONF.quota_multiplier_compute:
@@ -76,17 +97,21 @@ if CONF.quota_multiplier_storage:
 if CONF.quota_router:
     keystone.projects.update(project=project.id, quota_router=CONF.quota_router)
 
+# Set network parameters of the project
 keystone.projects.update(project=project.id, has_domain_network=str(CONF.has_domain_network))
 keystone.projects.update(project=project.id, has_shared_router=str(CONF.has_shared_router))
 keystone.projects.update(project=project.id, has_public_network=str(CONF.has_public_network))
 keystone.projects.update(project=project.id, show_public_network=str(CONF.has_public_network or CONF.has_shared_router))
 keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
+# Set other parameters of the project
 keystone.projects.update(project=project.id, owner=CONF.owner)
 
+# The network resources of the project should not be created automatically
 if CONF.unmanaged_network_resources:
     keystone.projects.update(project=project.id, unmanaged_network_resources='True')
 
+# Find or create the user of the project and assign the default roles
 if CONF.create_user:
     user = conn.identity.find_user(name, domain_id=domain.id)
     if not user:
@@ -98,15 +123,30 @@ if CONF.create_user:
     for role in DEFAULT_ROLES:
         conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
 
+# Assign the domain admin user to the project
+admin_password = None
+admin_name = f"{CONF.domain}-admin"
 if CONF.assign_admin_user:
-    user = conn.identity.find_user(f"{CONF.domain}-admin", domain_id=domain.id)
-    if user:
-        for role in DEFAULT_ROLES:
-            conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
+    admin_user = conn.identity.find_user(admin_name, domain_id=domain.id)
 
+    if not admin_user and CONF.create_admin_user:
+        admin_password = generate_password(CONF.password_length)
+        admin_user = conn.create_user(name=admin_name, password=admin_password, domain_id=domain.id)
+
+    if admin_user:
+        for role in DEFAULT_ROLES:
+            conn.grant_role(role, user=admin_user.id, project=project.id, domain=domain.id)
+
+# Outputs details about the project
 print(f"domain: {CONF.domain} ({domain.id})")
 print(f"project: {name} ({project.id})")
 
+# Outputs details about the domain admin user
+if CONF.create_admin_user and admin_password:
+    print(f"admin user: {admin_name} ({admin_user.id})")
+    print(f"admin password: {admin_password}")
+
+# Outputs details about the project user
 if CONF.create_user:
     print(f"user: {name} ({user.id})")
     print(f"password: {password}")
