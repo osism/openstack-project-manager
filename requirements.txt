@@ -1,4 +1,4 @@
 PyYAML==6.0
-openstacksdk==0.101.0
+openstacksdk==0.102.0
 os-client-config==2.1.0
 python-neutronclient==8.1.0
