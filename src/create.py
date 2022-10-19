@@ -8,39 +8,53 @@ import openstack
 
 
 # Default roles to be assigned to a new user for a project
-DEFAULT_ROLES = [
-    "_member_",
-    "heat_stack_owner",
-    "load-balancer_member"
-]
+DEFAULT_ROLES = ["_member_", "heat_stack_owner", "load-balancer_member"]
 
-PROJECT_NAME = 'openstack-project-manager'
+PROJECT_NAME = "openstack-project-manager"
 CONF = cfg.CONF
 
 # Available parameters for the CLI
 opts = [
-  cfg.BoolOpt('assign-admin-user', help='Assign admin user', default=True),
-  cfg.BoolOpt('create-admin-user', help='Create admin user', default=False),
-  cfg.BoolOpt('create-user', help='Create user', default=False),
-  cfg.BoolOpt('domain-name-prefix', help='Add domain name as prefix to the project name', default=True),
-  cfg.BoolOpt('has-domain-network', help='Has domain network infrastructure', default=False),
-  cfg.BoolOpt('has-public-network', help='Has public network infrastructure', default=True),
-  cfg.BoolOpt('has-shared-router', help='Has shared router', default=False),
-  cfg.BoolOpt('random', help='Generate random names', default=False),
-  cfg.BoolOpt('unmanaged-network-resources', help='Do not manage the network resources', default=False),
-  cfg.IntOpt('quota-multiplier', help='Quota multiplier', default='1'),
-  cfg.IntOpt('quota-multiplier-compute', help='Quota multiplier compute', default=None),
-  cfg.IntOpt('quota-multiplier-network', help='Quota multiplier network', default=None),
-  cfg.IntOpt('quota-multiplier-storage', help='Quota multiplier storage', default=None),
-  cfg.IntOpt('quota-router', help='Quota router', default=1),
-  cfg.IntOpt('password-length', help='Password length', default=16),
-  cfg.StrOpt('cloud', help='Managed cloud', default='service'),
-  cfg.StrOpt('domain', help='Domain', default='orange'),
-  cfg.StrOpt('name', help='Projectname', default='test-123'),
-  cfg.StrOpt('owner', help='Owner of the project', default='operations@betacloud.de'),
-  cfg.StrOpt('password', help='Password', default=None),
-  cfg.StrOpt('public-network', help='Public network', default='external'),
-  cfg.StrOpt('quota-class', help='Quota class', default='basic')
+    cfg.BoolOpt("assign-admin-user", help="Assign admin user", default=True),
+    cfg.BoolOpt("create-admin-user", help="Create admin user", default=False),
+    cfg.BoolOpt("create-user", help="Create user", default=False),
+    cfg.BoolOpt(
+        "domain-name-prefix",
+        help="Add domain name as prefix to the project name",
+        default=True,
+    ),
+    cfg.BoolOpt(
+        "has-domain-network", help="Has domain network infrastructure", default=False
+    ),
+    cfg.BoolOpt(
+        "has-public-network", help="Has public network infrastructure", default=True
+    ),
+    cfg.BoolOpt("has-shared-router", help="Has shared router", default=False),
+    cfg.BoolOpt("random", help="Generate random names", default=False),
+    cfg.BoolOpt(
+        "unmanaged-network-resources",
+        help="Do not manage the network resources",
+        default=False,
+    ),
+    cfg.IntOpt("quota-multiplier", help="Quota multiplier", default="1"),
+    cfg.IntOpt(
+        "quota-multiplier-compute", help="Quota multiplier compute", default=None
+    ),
+    cfg.IntOpt(
+        "quota-multiplier-network", help="Quota multiplier network", default=None
+    ),
+    cfg.IntOpt(
+        "quota-multiplier-storage", help="Quota multiplier storage", default=None
+    ),
+    cfg.IntOpt("quota-router", help="Quota router", default=1),
+    cfg.IntOpt("password-length", help="Password length", default=16),
+    cfg.StrOpt("cloud", help="Managed cloud", default="service"),
+    cfg.StrOpt("domain", help="Domain", default="orange"),
+    cfg.StrOpt("name", help="Projectname", default="test-123"),
+    cfg.StrOpt("owner", help="Owner of the project", default="operations@betacloud.de"),
+    cfg.StrOpt("password", help="Password", default=None),
+    cfg.StrOpt("public-network", help="Public network", default="external"),
+    cfg.StrOpt("quota-class", help="Quota class", default="basic"),
 ]
 CONF.register_cli_opts(opts)
 
@@ -48,7 +62,10 @@ CONF(sys.argv[1:], project=PROJECT_NAME)
 
 
 def generate_password(password_length: int) -> int:
-    return "".join(random.choice(string.ascii_letters + string.digits) for x in range(password_length))
+    return "".join(
+        random.choice(string.ascii_letters + string.digits)
+        for x in range(password_length)
+    )
 
 
 # Connect to the OpenStack environment
@@ -83,25 +100,40 @@ if not project:
     project = conn.create_project(name=name, domain_id=domain.id)
 
 # FIXME(berendt): use openstacksdk
-keystone = os_client_config.make_client('identity', cloud=CONF.cloud)
+keystone = os_client_config.make_client("identity", cloud=CONF.cloud)
 
 # Set the quota parameters of the project
 keystone.projects.update(project=project.id, quotaclass=CONF.quota_class)
 keystone.projects.update(project=project.id, quotamultiplier=CONF.quota_multiplier)
 if CONF.quota_multiplier_compute:
-    keystone.projects.update(project=project.id, quotamultiplier_compute=CONF.quota_multiplier_compute)
+    keystone.projects.update(
+        project=project.id, quotamultiplier_compute=CONF.quota_multiplier_compute
+    )
 if CONF.quota_multiplier_network:
-    keystone.projects.update(project=project.id, quotamultiplier_network=CONF.quota_multiplier_network)
+    keystone.projects.update(
+        project=project.id, quotamultiplier_network=CONF.quota_multiplier_network
+    )
 if CONF.quota_multiplier_storage:
-    keystone.projects.update(project=project.id, quotamultiplier_storage=CONF.quota_multiplier_storage)
+    keystone.projects.update(
+        project=project.id, quotamultiplier_storage=CONF.quota_multiplier_storage
+    )
 if CONF.quota_router:
     keystone.projects.update(project=project.id, quota_router=CONF.quota_router)
 
 # Set network parameters of the project
-keystone.projects.update(project=project.id, has_domain_network=str(CONF.has_domain_network))
-keystone.projects.update(project=project.id, has_shared_router=str(CONF.has_shared_router))
-keystone.projects.update(project=project.id, has_public_network=str(CONF.has_public_network))
-keystone.projects.update(project=project.id, show_public_network=str(CONF.has_public_network or CONF.has_shared_router))
+keystone.projects.update(
+    project=project.id, has_domain_network=str(CONF.has_domain_network)
+)
+keystone.projects.update(
+    project=project.id, has_shared_router=str(CONF.has_shared_router)
+)
+keystone.projects.update(
+    project=project.id, has_public_network=str(CONF.has_public_network)
+)
+keystone.projects.update(
+    project=project.id,
+    show_public_network=str(CONF.has_public_network or CONF.has_shared_router),
+)
 keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
 # Set other parameters of the project
@@ -109,13 +141,19 @@ keystone.projects.update(project=project.id, owner=CONF.owner)
 
 # The network resources of the project should not be created automatically
 if CONF.unmanaged_network_resources:
-    keystone.projects.update(project=project.id, unmanaged_network_resources='True')
+    keystone.projects.update(project=project.id, unmanaged_network_resources="True")
 
 # Find or create the user of the project and assign the default roles
 if CONF.create_user:
     user = conn.identity.find_user(name, domain_id=domain.id)
     if not user:
-        user = conn.create_user(name=name, password=password, default_project=project, domain_id=domain.id, email=CONF.owner)
+        user = conn.create_user(
+            name=name,
+            password=password,
+            default_project=project,
+            domain_id=domain.id,
+            email=CONF.owner,
+        )
     else:
         conn.update_user(user, password=password)
 
@@ -131,11 +169,15 @@ if CONF.assign_admin_user:
 
     if not admin_user and CONF.create_admin_user:
         admin_password = generate_password(CONF.password_length)
-        admin_user = conn.create_user(name=admin_name, password=admin_password, domain_id=domain.id)
+        admin_user = conn.create_user(
+            name=admin_name, password=admin_password, domain_id=domain.id
+        )
 
     if admin_user:
         for role in DEFAULT_ROLES:
-            conn.grant_role(role, user=admin_user.id, project=project.id, domain=domain.id)
+            conn.grant_role(
+                role, user=admin_user.id, project=project.id, domain=domain.id
+            )
 
 # Outputs details about the project
 print(f"domain: {CONF.domain} ({domain.id})")
