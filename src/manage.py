@@ -502,13 +502,7 @@ def check_endpoints(project):
     ]
 
     for endpoint in [x for e in endpoints for x in ENDPOINTS[e]]:
-
-        if endpoint == "keystone":
-            interfaces = ["internal", "public", "admin"]
-        else:
-            interfaces = ["internal", "public"]
-
-        for interface in interfaces:
+        for interface in ["internal", "public"]:
             endpoint_group_name = f"{endpoint}-{interface}"
 
             if endpoint_group_name not in assigned_endpoint_groups:
