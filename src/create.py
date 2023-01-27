@@ -159,7 +159,10 @@ if CONF.create_user:
 
     # FIXME(berendt): check existing assignments
     for role in DEFAULT_ROLES:
-        conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
+        try:
+            conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
+        except:
+            pass
 
 # Assign the domain admin user to the project
 admin_password = None
@@ -175,9 +178,12 @@ if CONF.assign_admin_user:
 
     if admin_user:
         for role in DEFAULT_ROLES:
-            conn.grant_role(
-                role, user=admin_user.id, project=project.id, domain=domain.id
-            )
+            try:
+                conn.grant_role(
+                    role, user=admin_user.id, project=project.id, domain=domain.id
+                )
+            except:
+                pass
 
 # Outputs details about the project
 print(f"domain: {CONF.domain} ({domain.id})")
