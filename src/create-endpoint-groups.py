@@ -2,13 +2,13 @@ import os
 
 from loguru import logger
 import os_client_config
-import shade
+import openstack
 from tabulate import tabulate
 
-CLOUDNAME = os.environ.get("CLOUD", "admin")
+CLOUD = os.environ.get("CLOUD", "admin")
 
-cloud = shade.operator_cloud(cloud=CLOUDNAME)
-keystone = os_client_config.make_client("identity", cloud=CLOUDNAME)
+conn = openstack.connect(cloud=CLOUD)
+keystone = os_client_config.make_client("identity", cloud=CLOUD)
 
 existing_endpoint_groups = {x.name: x for x in keystone.endpoint_groups.list()}
 
