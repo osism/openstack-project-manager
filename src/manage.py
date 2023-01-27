@@ -73,7 +73,7 @@ def check_quota(project, cloud):
         ):
             quota_router = quota_router + 1
 
-    logger.info("%s - check network quota" % project.name)
+    logger.info(f"{project.name} - check network quota")
     quotanetwork = cloud.get_network_quotas(project.id)
     for key in quotaclasses[project.quotaclass]["network"]:
 
@@ -86,13 +86,12 @@ def check_quota(project, cloud):
 
         if quota_should_be != quotanetwork[key]:
             logger.info(
-                "%s - network[%s] = %d != %d"
-                % (project.name, key, quota_should_be, quotanetwork[key])
+                f"{project.name} - network[{key} = {quota_should_be} != {quotanetwork[key]}"
             )
             if not CONF.dry_run:
                 cloud.set_network_quotas(project.id, **{key: quota_should_be})
 
-    logger.info("%s - check compute quota" % project.name)
+    logger.info(f"{project.name} - check compute quota")
     quotacompute = cloud.get_compute_quotas(project.id)
     for key in quotaclasses[project.quotaclass]["compute"]:
         if key in [
@@ -107,13 +106,12 @@ def check_quota(project, cloud):
         quota_should_be = quotaclasses[project.quotaclass]["compute"][key] * tmultiplier
         if quota_should_be != quotacompute[key]:
             logger.info(
-                "%s - compute[%s] = %d != %d"
-                % (project.name, key, quota_should_be, quotacompute[key])
+                f"{project.name} - compute[{key}] = {quota_should_be} != {quotacompute[key]}"
             )
             if not CONF.dry_run:
                 cloud.set_compute_quotas(project.id, **{key: quota_should_be})
 
-    logger.info("%s - check volume quota" % project.name)
+    logger.info(f"{project.name} - check volume quota")
     quotavolume = cloud.get_volume_quotas(project.id)
     for key in quotaclasses[project.quotaclass]["volume"]:
         if key in ["per_volume_gigabytes"]:
@@ -124,8 +122,7 @@ def check_quota(project, cloud):
         quota_should_be = quotaclasses[project.quotaclass]["volume"][key] * tmultiplier
         if quota_should_be != quotavolume[key]:
             logger.info(
-                "%s - volume[%s] = %d != %d"
-                % (project.name, key, quota_should_be, quotavolume[key])
+                f"{project.name} - volume[{key}] = {quota_should_be} != {quotavolume[key]}"
             )
             if not CONF.dry_run:
                 cloud.set_volume_quotas(project.id, **{key: quota_should_be})
@@ -146,7 +143,7 @@ def create_external_network_rbacs(project, domain):
         if "domain_network" in project:
             public_net_name = project.domain_network
         else:
-            public_net_name = "%s-public" % domain_name
+            public_net_name = f"{domain_name}-public"
 
         add_external_network(project, public_net_name)
 
@@ -170,7 +167,7 @@ def create_network_resources(project, domain):
     project_name = project.name.lower()
 
     if check_bool(project, "has_public_network"):
-        logger.info("%s - check public network resources" % project.name)
+        logger.info(f"{project.name} - check public network resources")
 
         if "public_network" in project:
             availability_zone = "south-2"
@@ -179,14 +176,13 @@ def create_network_resources(project, domain):
             availability_zone = "south-1"
             public_net_name = "public"
 
-        net_name = "net-to-%s-%s" % (public_net_name, project_name)
-        router_name = "router-to-%s-%s" % (public_net_name, project_name)
-        subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
+        net_name = f"net-to-{public_net_name}-{project_name}"
+        router_name = f"router-to-{public_net_name}-{project_name}"
+        subnet_name = f"subnet-to-{public_net_name}-{project_name}"
 
         if check_bool(project, "is_service_project"):
             logger.info(
-                "%s - it's a service project, network resources are not created"
-                % project.name
+                f"{project.name} - it's a service project, network resources are not created"
             )
         else:
             create_network_with_router(
@@ -199,23 +195,22 @@ def create_network_resources(project, domain):
             )
 
     if "domain_name" != "default" and check_bool(project, "has_domain_network"):
-        logger.info("%s - check domain network resources" % project.name)
+        logger.info(f"{project.name} - check domain network resources")
 
         if "domain_network" in project:
             availability_zone = "south-2"
             public_net_name = project.domain_network
         else:
             availability_zone = "south-1"
-            public_net_name = "%s-public" % domain_name
+            public_net_name = f"{domain_name}-public"
 
-        net_name = "net-to-%s-%s" % (public_net_name, project_name)
-        router_name = "router-to-%s-%s" % (public_net_name, project_name)
-        subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
+        net_name = f"net-to-{public_net_name}-{project_name}"
+        router_name = f"router-to-{public_net_name}-{project_name}"
+        subnet_name = f"subnet-to-{public_net_name}-{project_name}"
 
         if check_bool(project, "is_service_project"):
             logger.info(
-                "%s - it's a service project, network resources are not created"
-                % project.name
+                f"{project.name} - it's a service project, network resources are not created"
             )
         else:
             create_network_with_router(
@@ -236,13 +231,12 @@ def create_network_resources(project, domain):
             availability_zone = "south-1"
             public_net_name = "public"
 
-        net_name = "net-to-%s-%s" % (public_net_name, project_name)
-        subnet_name = "subnet-to-%s-%s" % (public_net_name, project_name)
+        net_name = f"net-to-{public_net_name}-{project_name}"
+        subnet_name = f"subnet-to-{public_net_name}-{project_name}"
 
         if check_bool(project, "is_service_project"):
             logger.info(
-                "%s - it's a service project, network resources are not created"
-                % project.name
+                f"{project.name} - it's a service project, network resources are not created"
             )
         else:
             create_service_network(project, net_name, subnet_name, availability_zone)
@@ -273,7 +267,7 @@ def create_network_resources(project, domain):
         if "domain_network" in project:
             public_net_name = project.domain_network
         else:
-            public_net_name = "%s-public" % domain_name
+            public_net_name = f"{domain_name}-public"
 
         del_external_network(project, public_net_name)
 
@@ -282,8 +276,7 @@ def add_service_network(project, net_name):
 
     try:
         logger.info(
-            "%s - check if service rbac policy must be created (%s)"
-            % (project.name, net_name)
+            f"{project.name} - check if service rbac policy must be created ({net_name})"
         )
         net = cloud.get_network(net_name)
         rbac_policies = neutron.list_rbac_policies(
@@ -298,14 +291,11 @@ def add_service_network(project, net_name):
 
         if len(rbac_policies["rbac_policies"]) == 0:
             logger.info(
-                "%s - service rbac policy has to be created (%s)"
-                % (project.name, net_name)
+                f"{project.name} - service rbac policy has to be created ({net_name})"
             )
 
         if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 0:
-            logger.info(
-                "%s - create service rbac policy (%s)" % (project.name, net_name)
-            )
+            logger.info(f"{project.name} - create service rbac policy ({net_name})")
             neutron.create_rbac_policy(
                 {
                     "rbac_policy": {
@@ -327,8 +317,7 @@ def add_external_network(project, public_net_name):
 
     try:
         logger.info(
-            "%s - check if external rbac policy must be created (%s)"
-            % (project.name, public_net_name)
+            f"{project.name} - check if external rbac policy must be created ({public_net_name})"
         )
 
         public_net = cloud.get_network(public_net_name)
@@ -344,14 +333,11 @@ def add_external_network(project, public_net_name):
 
         if len(rbac_policies["rbac_policies"]) == 0:
             logger.info(
-                "%s - external rbac policy has to be created (%s)"
-                % (project.name, public_net_name)
+                f"{project.name} - external rbac policy has to be created ({public_net_name})"
             )
 
         if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 0:
-            logger.info(
-                "%s - create rbac policy (%s)" % (project.name, public_net_name)
-            )
+            logger.info(f"{project.name} - create rbac policy ({public_net_name})")
             neutron.create_rbac_policy(
                 {
                     "rbac_policy": {
@@ -373,8 +359,7 @@ def del_external_network(project, public_net_name):
 
     try:
         logger.info(
-            "%s - check if external rbac policy must be deleted (%s)"
-            % (project.name, public_net_name)
+            f"{project.name} - check if external rbac policy must be deleted ({public_net_name})"
         )
 
         public_net = cloud.get_network(public_net_name)
@@ -390,14 +375,12 @@ def del_external_network(project, public_net_name):
 
         if len(rbac_policies["rbac_policies"]) == 1:
             logger.info(
-                "%s - external rbac policy has to be deleted (%s)"
-                % (project.name, public_net_name)
+                f"{project.name} - external rbac policy has to be deleted ({public_net_name})"
             )
 
         if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 1:
             logger.info(
-                "%s - delete external rbac policy (%s)"
-                % (project.name, public_net_name)
+                f"{project.name} - delete external rbac policy ({public_net_name})"
             )
             rbac_policy = rbac_policies["rbac_policies"][0]["id"]
             neutron.delete_rbac_policy(rbac_policy)
@@ -411,12 +394,12 @@ def del_external_network(project, public_net_name):
 def create_service_network(project, net_name, subnet_name, availability_zone):
 
     domain = cloud.get_domain(name_or_id=project.domain_id)
-    project_service = cloud.get_project(name_or_id="service-%s" % domain.name)
+    project_service = cloud.get_project(name_or_id=f"service-{domain.name}")
 
     net = cloud.get_network(net_name, filters={"project_id": project_service.id})
 
     if not net:
-        logger.info("%s - create service network (%s)" % (project.name, net_name))
+        logger.info(f"{project.name} - create service network ({net_name})")
 
         if not CONF.dry_run:
             net = cloud.create_network(
@@ -427,7 +410,7 @@ def create_service_network(project, net_name, subnet_name, availability_zone):
 
     subnet = cloud.get_subnet(subnet_name, filters={"project_id": project_service.id})
     if not subnet:
-        logger.info("%s - create service subnet (%s)" % (project.name, subnet_name))
+        logger.info(f"{project.name} - create service subnet ({subnet_name})")
 
         if not CONF.dry_run:
             subnet = cloud.create_subnet(
@@ -445,7 +428,7 @@ def create_network(project, net_name, subnet_name, availability_zone):
     net = cloud.get_network(net_name, filters={"project_id": project.id})
 
     if not net:
-        logger.info("%s - create network (%s)" % (project.name, net_name))
+        logger.info(f"{project.name} - create network ({net_name})")
 
         if not CONF.dry_run:
             net = cloud.create_network(
@@ -456,7 +439,7 @@ def create_network(project, net_name, subnet_name, availability_zone):
 
     subnet = cloud.get_subnet(subnet_name, filters={"project_id": project.id})
     if not subnet:
-        logger.info("%s - create subnet (%s)" % (project.name, subnet_name))
+        logger.info(f"{project.name} - create subnet ({subnet_name})")
 
         if not CONF.dry_run:
             subnet = cloud.create_subnet(
@@ -480,7 +463,7 @@ def create_network_with_router(
 
     if not router:
         public_network_id = cloud.get_network(public_net_name).id
-        logger.info("%s - create router (%s)" % (project.name, router_name))
+        logger.info(f"{project.name} - create router ({router_name})")
 
         if not CONF.dry_run:
             router = cloud.create_router(
@@ -498,8 +481,7 @@ def create_network_with_router(
 
     if attach_router or attach_subnet:
         logger.info(
-            "%s - attach subnet (%s) to router (%s)"
-            % (project.name, subnet_name, router_name)
+            f"{project.name} - attach subnet ({subnet_name}) to router ({router_name})"
         )
         if not CONF.dry_run:
             cloud.add_router_interface(router, subnet_id=subnet.id)
@@ -527,12 +509,10 @@ def check_endpoints(project):
             interfaces = ["internal", "public"]
 
         for interface in interfaces:
-            endpoint_group_name = "%s-%s" % (endpoint, interface)
+            endpoint_group_name = f"{endpoint}-{interface}"
 
             if endpoint_group_name not in assigned_endpoint_groups:
-                logger.info(
-                    "%s - add endpoint %s (%s)" % (project.name, endpoint, interface)
-                )
+                logger.info(f"{project.name} - add endpoint {endpoint} ({interface})")
 
                 if not CONF.dry_run:
                     endpoint_group = existing_endpoint_groups[endpoint_group_name]
@@ -544,18 +524,15 @@ def check_endpoints(project):
 def process_project(project):
 
     logger.info(
-        "%s - project_id = %s, domain_id = %s"
-        % (project.name, project.id, project.domain_id)
+        f"{project.name} - project_id = {project.id}, domain_id = {project.domain_id}"
     )
 
     if "unmanaged" in project:
-        logger.info("%s - not managed" % project.name)
+        logger.info(f"{project.name} - not managed")
     elif "quotaclass" not in project:
-        logger.warning("%s - quotaclass not set" % project.name)
+        logger.warning(f"{project.name} - quotaclass not set")
     elif project.quotaclass not in quotaclasses:
-        logger.warning(
-            "%s - quotaclass %s not defined" % (project.name, project.quotaclass)
-        )
+        logger.warning(f"{project.name} - quotaclass {project.quotaclass} not defined")
     else:
         domain = cloud.get_domain(project.domain_id)
 
@@ -599,7 +576,7 @@ existing_endpoint_groups = {x.name: x for x in KEYSTONE.endpoint_groups.list()}
 if CONF.name and not CONF.domain:
     project = cloud.get_project(name_or_id=CONF.name)
     if not project:
-        logger.error("project %s does not exist" % CONF.name)
+        logger.error(f"project {CONF.name} does not exist")
         sys.exit(1)
 
     if project.domain_id == "default":
@@ -607,27 +584,25 @@ if CONF.name and not CONF.domain:
         sys.exit(1)
 
     domain = cloud.get_domain(name_or_id=project.domain_id)
-    logger.info("%s - domain_id = %s" % (domain.name, domain.id))
+    logger.info(f"{domain.name} - domain_id = {domain.id}")
 
     process_project(project)
 
 if CONF.name and CONF.domain:
     domain = cloud.get_domain(name_or_id=CONF.domain)
     if not domain:
-        logger.error("domain %s does not exist" % CONF.domain)
+        logger.error(f"domain {CONF.domain} does not exist")
         sys.exit(1)
 
     if domain.id == "default":
         logger.error("projects in the default domain are not managed")
         sys.exit(1)
 
-    logger.info("%s - domain_id = %s" % (domain.name, domain.id))
+    logger.info(f"{domain.name} - domain_id = {domain.id}")
 
     project = cloud.get_project(name_or_id=CONF.name, domain_id=domain.id)
     if not project:
-        logger.error(
-            "project %s in domain %s does not exist" % (CONF.name, CONF.domain)
-        )
+        logger.error(f"project {CONF.name} in domain {CONF.domain} does not exist")
         sys.exit(1)
 
     process_project(project)
@@ -635,14 +610,14 @@ if CONF.name and CONF.domain:
 if not CONF.name and CONF.domain:
     domain = cloud.get_domain(name_or_id=CONF.domain)
     if not domain:
-        logger.error("domain %s does not exist" % CONF.domain)
+        logger.error(f"domain {CONF.domain} does not exist")
         sys.exit(1)
 
     if domain.id == "default":
         logger.error("projects in the default domain are not managed")
         sys.exit(1)
 
-    logger.info("%s - domain_id = %s" % (domain.name, domain.id))
+    logger.info(f"{domain.name} - domain_id = {domain.id}")
 
     for project in cloud.list_projects(domain_id=domain.id):
         process_project(project)
