@@ -54,7 +54,7 @@ opts = [
     cfg.StrOpt("owner", help="Owner of the project", default="operations@betacloud.de"),
     cfg.StrOpt("password", help="Password", default=None),
     cfg.StrOpt("public-network", help="Public network", default="external"),
-    cfg.StrOpt("quota-class", help="Quota class", default="basic"),
+    cfg.StrOpt("quota-class", help="Quota class", default="default"),
 ]
 CONF.register_cli_opts(opts)
 
