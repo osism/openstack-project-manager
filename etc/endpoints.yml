@@ -17,4 +17,3 @@ orchestration:
 telemetry:
   - aodh
   - gnocchi
-  - panko
