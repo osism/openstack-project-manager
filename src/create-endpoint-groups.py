@@ -14,7 +14,7 @@ existing_endpoint_groups = {x.name: x for x in keystone.endpoint_groups.list()}
 
 changed = False
 for service in keystone.services.list():
-    for interface in ["public", "internal", "admin"]:
+    for interface in ["public", "internal"]:
         name = f"{service.name}-{interface}"
         if name not in existing_endpoint_groups.keys():
             changed = True
