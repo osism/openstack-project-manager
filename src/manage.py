@@ -1,5 +1,6 @@
 import sys
 
+from loguru import logger
 import neutronclient
 import openstack
 from oslo_config import cfg
@@ -22,6 +23,7 @@ opts = [
 ]
 CONF.register_cli_opts(opts)
 CONF(sys.argv[1:], project=PROJECT_NAME)
+
 
 def check_bool(project, param):
     return param in project and str(project.get(param)) in [
