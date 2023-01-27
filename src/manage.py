@@ -17,7 +17,7 @@ opts = [
     cfg.StrOpt(
         "endpoints", help="Path to the endpoints.yml file", default="etc/endpoints.yml"
     ),
-    cfg.StrOpt("cloud", help="Cloud name in clouds.yaml", default="service"),
+    cfg.StrOpt("cloud", help="Cloud name in clouds.yaml", default="admin"),
     cfg.StrOpt("domain", help="Domain to be managed"),
     cfg.StrOpt("name", help="Project to be managed"),
 ]

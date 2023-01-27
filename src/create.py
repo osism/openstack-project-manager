@@ -48,7 +48,7 @@ opts = [
     ),
     cfg.IntOpt("quota-router", help="Quota router", default=1),
     cfg.IntOpt("password-length", help="Password length", default=16),
-    cfg.StrOpt("cloud", help="Managed cloud", default="service"),
+    cfg.StrOpt("cloud", help="Managed cloud", default="admin"),
     cfg.StrOpt("domain", help="Domain", default="orange"),
     cfg.StrOpt("name", help="Projectname", default="test-123"),
     cfg.StrOpt("owner", help="Owner of the project", default="operations@betacloud.de"),
