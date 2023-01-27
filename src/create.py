@@ -50,7 +50,7 @@ opts = [
     cfg.IntOpt("password-length", help="Password length", default=16),
     cfg.StrOpt("cloud", help="Managed cloud", default="admin"),
     cfg.StrOpt("domain", help="Domain", default="default"),
-    cfg.StrOpt("name", help="Projectname", default="test-123"),
+    cfg.StrOpt("name", help="Projectname", default="sandbox"),
     cfg.StrOpt("owner", help="Owner of the project", default=""),
     cfg.StrOpt("password", help="Password", default=None),
     cfg.StrOpt("public-network", help="Public network", default="external"),
