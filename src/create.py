@@ -51,7 +51,7 @@ opts = [
     cfg.StrOpt("cloud", help="Managed cloud", default="admin"),
     cfg.StrOpt("domain", help="Domain", default="default"),
     cfg.StrOpt("name", help="Projectname", default="test-123"),
-    cfg.StrOpt("owner", help="Owner of the project", default="operations@betacloud.de"),
+    cfg.StrOpt("owner", help="Owner of the project", default=""),
     cfg.StrOpt("password", help="Password", default=None),
     cfg.StrOpt("public-network", help="Public network", default="external"),
     cfg.StrOpt("quota-class", help="Quota class", default="default"),
