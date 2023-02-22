@@ -2,6 +2,7 @@ import random
 import string
 import sys
 
+from loguru import logger
 from oslo_config import cfg
 import os_client_config
 import openstack
@@ -186,15 +187,15 @@ if CONF.assign_admin_user:
                 pass
 
 # Outputs details about the project
-print(f"domain: {CONF.domain} ({domain.id})")
-print(f"project: {name} ({project.id})")
+logger.info(f"domain: {CONF.domain} ({domain.id})")
+logger.info(f"project: {name} ({project.id})")
 
 # Outputs details about the domain admin user
 if CONF.create_admin_user and admin_password:
-    print(f"admin user: {admin_name} ({admin_user.id})")
-    print(f"admin password: {admin_password}")
+    logger.info(f"admin user: {admin_name} ({admin_user.id})")
+    logger.info(f"admin password: {admin_password}")
 
 # Outputs details about the project user
 if CONF.create_user:
-    print(f"user: {name} ({user.id})")
-    print(f"password: {password}")
+    logger.info(f"user: {name} ({user.id})")
+    logger.info(f"password: {password}")
