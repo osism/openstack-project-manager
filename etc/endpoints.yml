@@ -9,6 +9,7 @@ default:
   - nova
   - octavia
   - placement
+  - skyline
   - swift
 
 orchestration:
