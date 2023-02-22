@@ -37,6 +37,7 @@ opts = [
         help="Manage the network resources",
         default=False,
     ),
+    cfg.IntOpt("password-length", help="Password length", default=16),
     cfg.IntOpt("quota-multiplier", help="Quota multiplier", default="1"),
     cfg.IntOpt(
         "quota-multiplier-compute", help="Quota multiplier compute", default=None
@@ -48,9 +49,9 @@ opts = [
         "quota-multiplier-storage", help="Quota multiplier storage", default=None
     ),
     cfg.IntOpt("quota-router", help="Quota router", default=1),
-    cfg.IntOpt("password-length", help="Password length", default=16),
     cfg.StrOpt("cloud", help="Managed cloud", default="admin"),
     cfg.StrOpt("domain", help="Domain", default="default"),
+    cfg.StrOpt("internal-id", help="Internal ID", default=None),
     cfg.StrOpt("name", help="Projectname", default="sandbox"),
     cfg.StrOpt("owner", help="Owner of the project", default=""),
     cfg.StrOpt("password", help="Password", default=None),
@@ -143,6 +144,9 @@ keystone.projects.update(project=project.id, owner=CONF.owner)
 # The network resources of the project should be created automatically
 if CONF.managed_network_resources:
     keystone.projects.update(project=project.id, managed_network_resources="True")
+
+if CONF.internal_id:
+    keystone.projects.update(project=project.id, internal_id=CONF.internal_id)
 
 # Find or create the user of the project and assign the default roles
 if CONF.create_user:
