@@ -536,7 +536,7 @@ def process_project(project):
 
         if (
             project.quotaclass not in ["default", "service"]
-            and "unmanaged_network_resources" not in project
+            and "managed_network_resources" in project
         ):
             create_network_resources(project, domain)
 

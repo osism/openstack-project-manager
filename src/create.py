@@ -33,8 +33,8 @@ opts = [
     cfg.BoolOpt("has-shared-router", help="Has shared router", default=False),
     cfg.BoolOpt("random", help="Generate random names", default=False),
     cfg.BoolOpt(
-        "unmanaged-network-resources",
-        help="Do not manage the network resources",
+        "managed-network-resources",
+        help="Manage the network resources",
         default=False,
     ),
     cfg.IntOpt("quota-multiplier", help="Quota multiplier", default="1"),
@@ -140,9 +140,9 @@ keystone.projects.update(project=project.id, public_network=CONF.public_network)
 # Set other parameters of the project
 keystone.projects.update(project=project.id, owner=CONF.owner)
 
-# The network resources of the project should not be created automatically
-if CONF.unmanaged_network_resources:
-    keystone.projects.update(project=project.id, unmanaged_network_resources="True")
+# The network resources of the project should be created automatically
+if CONF.managed_network_resources:
+    keystone.projects.update(project=project.id, managed_network_resources="True")
 
 # Find or create the user of the project and assign the default roles
 if CONF.create_user:
