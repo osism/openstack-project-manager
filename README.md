@@ -6,7 +6,10 @@
 ## New project
 
 ```
-tox -e create -- --has-public-network --name testing --domain testing
+tox -e create -- \
+    --has-public-network \
+    --name testing \
+    --domain testing
 ```
 
 ## Usage
@@ -22,23 +25,38 @@ The dry drun mode can be activated via ``--dry-run``.
 ### Manage a single project
 
 ```
-tox -- --domain DOMAIN --name PROJECT
+tox -- \
+    --domain DOMAIN \
+    --name PROJECT
 ```
 
 ### Manage all projects in a domain
 
 ```
-tox -- --domain DOMAIN
+tox -- \
+    --domain DOMAIN
 ```
 
 ### Create a customised project
 
 ```
-tox -e create -- --quota-router=3 --quota-multiplier=2 --domain betacloud --owner foo@osism.tech  --name foo --nodomain-name-prefix
+tox -e create -- \
+    --quota-router=3 \
+    --quota-multiplier=2 \
+    --domain betacloud \
+    --owner foo@osism.tech \
+    --name foo \
+    --nodomain-name-prefix \
+    --managed-network-resources
 ```
 
 ### Create an Okeanos project
 
 ```
-tox -e create -- --domain okeanos --owner okeanos@osism.tech --unmanaged-network-resources --create-user --noassign-admin-user --quota-class okeanos --name test
+tox -e create -- \
+    --domain okeanos \
+    --owner okeanos@osism.tech
+    --create-user \
+    --quota-class okeanos \
+    --name test
 ```
