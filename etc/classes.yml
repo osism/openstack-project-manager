@@ -2,8 +2,6 @@
 default:
   compute:
     cores: 0
-    fixed_ips: 0
-    floating_ips: 0
     injected_file_content_bytes: 10240
     injected_file_path_bytes: 255
     injected_files: 5
@@ -11,8 +9,6 @@ default:
     key_pairs: 0
     metadata_items: 128
     ram: 0
-    security_group_rules: 0
-    security_groups: 0
     server_group_members: 0
     server_groups: 0
   network:
@@ -36,8 +32,6 @@ default:
 service:
   compute:
     cores: 256
-    fixed_ips: 256
-    floating_ips: 256
     injected_file_content_bytes: 10240
     injected_file_path_bytes: 255
     injected_files: 5
@@ -45,8 +39,6 @@ service:
     key_pairs: 256
     metadata_items: 128
     ram: 262144
-    security_group_rules: 256
-    security_groups: 256
     server_group_members: 256
     server_groups: 256
   network:
@@ -70,8 +62,6 @@ service:
 basic:
   compute:
     cores: 4
-    fixed_ips: 10
-    floating_ips: 4
     injected_file_content_bytes: 10240
     injected_file_path_bytes: 255
     injected_files: 5
@@ -79,8 +69,6 @@ basic:
     key_pairs: 4
     metadata_items: 128
     ram: 8192
-    security_group_rules: 20
-    security_groups: 5
     server_group_members: 4
     server_groups: 4
   network:
@@ -104,8 +92,6 @@ basic:
 okeanos:
   compute:
     cores: 50
-    fixed_ips: 100
-    floating_ips: 10
     injected_file_content_bytes: 10240
     injected_file_path_bytes: 255
     injected_files: 5
@@ -113,8 +99,6 @@ okeanos:
     key_pairs: 5
     metadata_items: 128
     ram: 131072
-    security_group_rules: 100
-    security_groups: 100
     server_group_members: 100
     server_groups: 100
   network:
