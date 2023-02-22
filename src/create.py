@@ -2,10 +2,10 @@ import random
 import string
 import sys
 
-from loguru import logger
 from oslo_config import cfg
 import os_client_config
 import openstack
+from tabulate import tabulate
 
 
 # Default roles to be assigned to a new user for a project
@@ -192,16 +192,23 @@ if CONF.assign_admin_user:
             except:
                 pass
 
-# Outputs details about the project
-logger.info(f"domain: {CONF.domain} ({domain.id})")
-logger.info(f"project: {name} ({project.id})")
+result = [
+    ["domain", CONF.domain, domain.id],
+    ["project", name, project.id],
+]
 
 # Outputs details about the domain admin user
 if CONF.create_admin_user and admin_password:
-    logger.info(f"admin user: {admin_name} ({admin_user.id})")
-    logger.info(f"admin password: {admin_password}")
+    result.append(["admin", admin_name, admin_user.id])
+    result.append(["admin_password", admin_password, ""])
 
 # Outputs details about the project user
 if CONF.create_user:
-    logger.info(f"user: {name} ({user.id})")
-    logger.info(f"password: {password}")
+    result.append(["user", name, user.id])
+    result.append(["password", password, ""])
+
+print(
+    tabulate(
+        result, headers=["name", "value", "id"], tablefmt="psql"
+    )
+)
