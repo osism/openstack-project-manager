@@ -4,7 +4,9 @@
     default-branch: main
     check:
       jobs:
+        - flake8
         - yamllint
     gate:
       jobs:
+        - flake8
         - yamllint
