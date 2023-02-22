@@ -22,7 +22,7 @@ opts = [
     cfg.BoolOpt(
         "domain-name-prefix",
         help="Add domain name as prefix to the project name",
-        default=True,
+        default=True
     ),
     cfg.BoolOpt(
         "has-domain-network", help="Has domain network infrastructure", default=False
@@ -35,7 +35,7 @@ opts = [
     cfg.BoolOpt(
         "managed-network-resources",
         help="Manage the network resources",
-        default=False,
+        default=False
     ),
     cfg.IntOpt("password-length", help="Password length", default=16),
     cfg.IntOpt("quota-multiplier", help="Quota multiplier", default="1"),
@@ -56,7 +56,7 @@ opts = [
     cfg.StrOpt("owner", help="Owner of the project", default=""),
     cfg.StrOpt("password", help="Password", default=None),
     cfg.StrOpt("public-network", help="Public network", default="public"),
-    cfg.StrOpt("quota-class", help="Quota class", default="default"),
+    cfg.StrOpt("quota-class", help="Quota class", default="default")
 ]
 CONF.register_cli_opts(opts)
 
@@ -134,7 +134,7 @@ keystone.projects.update(
 )
 keystone.projects.update(
     project=project.id,
-    show_public_network=str(CONF.has_public_network or CONF.has_shared_router),
+    show_public_network=str(CONF.has_public_network or CONF.has_shared_router)
 )
 keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
@@ -157,7 +157,7 @@ if CONF.create_user:
             password=password,
             default_project=project,
             domain_id=domain.id,
-            email=CONF.owner,
+            email=CONF.owner
         )
     else:
         conn.update_user(user, password=password)
