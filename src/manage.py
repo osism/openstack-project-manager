@@ -509,10 +509,13 @@ def check_endpoints(project):
                 logger.info(f"{project.name} - add endpoint {endpoint} ({interface})")
 
                 if not CONF.dry_run:
-                    endpoint_group = existing_endpoint_groups[endpoint_group_name]
-                    KEYSTONE.endpoint_filter.add_endpoint_group_to_project(
-                        endpoint_group=endpoint_group.id, project=project.id
-                    )
+                    try:
+                        endpoint_group = existing_endpoint_groups[endpoint_group_name]
+                        KEYSTONE.endpoint_filter.add_endpoint_group_to_project(
+                            endpoint_group=endpoint_group.id, project=project.id
+                        )
+                    except KeyError:
+                        pass
 
 
 def process_project(project):
