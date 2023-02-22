@@ -56,7 +56,7 @@ opts = [
     cfg.StrOpt("owner", help="Owner of the project", default=""),
     cfg.StrOpt("password", help="Password", default=None),
     cfg.StrOpt("public-network", help="Public network", default="public"),
-    cfg.StrOpt("quota-class", help="Quota class", default="default"),
+    cfg.StrOpt("quota-class", help="Quota class", default="basic"),
 ]
 CONF.register_cli_opts(opts)
 
