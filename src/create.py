@@ -16,7 +16,7 @@ CONF = cfg.CONF
 
 # Available parameters for the CLI
 opts = [
-    cfg.BoolOpt("assign-admin-user", help="Assign admin user", default=True),
+    cfg.BoolOpt("assign-admin-user", help="Assign admin user", default=False),
     cfg.BoolOpt("create-admin-user", help="Create admin user", default=False),
     cfg.BoolOpt("create-user", help="Create user", default=False),
     cfg.BoolOpt(
