@@ -94,6 +94,8 @@ else:
 # Establish dedicated connection to Keystone service
 # FIXME(berendt): use get_domain
 domain = conn.identity.find_domain(CONF.domain)
+if not domain:
+    domain = conn.create_domain(name=CONF.domain)
 
 # Find or create the project
 # FIXME(berendt): use get_project
