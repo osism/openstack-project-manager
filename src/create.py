@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 
 # Default roles to be assigned to a new user for a project
-DEFAULT_ROLES = ["creator", "_member_", "heat_stack_owner", "load-balancer_member"]
+DEFAULT_ROLES = ["creator", "member", "heat_stack_owner", "load-balancer_member"]
 
 PROJECT_NAME = "openstack-project-manager"
 CONF = cfg.CONF
