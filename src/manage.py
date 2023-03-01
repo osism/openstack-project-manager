@@ -170,10 +170,10 @@ def create_network_resources(project, domain):
         logger.info(f"{project.name} - check public network resources")
 
         if "public_network" in project:
-            availability_zone = "south-2"
+            availability_zone = "nova"
             public_net_name = project.public_network
         else:
-            availability_zone = "south-1"
+            availability_zone = "nova"
             public_net_name = "public"
 
         net_name = f"net-to-{public_net_name}-{project_name}"
@@ -198,10 +198,10 @@ def create_network_resources(project, domain):
         logger.info(f"{project.name} - check domain network resources")
 
         if "domain_network" in project:
-            availability_zone = "south-2"
+            availability_zone = "nova"
             public_net_name = project.domain_network
         else:
-            availability_zone = "south-1"
+            availability_zone = "nova"
             public_net_name = f"{domain_name}-public"
 
         net_name = f"net-to-{public_net_name}-{project_name}"
@@ -225,10 +225,10 @@ def create_network_resources(project, domain):
     if check_bool(project, "has_shared_router"):
 
         if "public_network" in project:
-            availability_zone = "south-2"
+            availability_zone = "nova"
             public_net_name = project.public_network
         else:
-            availability_zone = "south-1"
+            availability_zone = "nova"
             public_net_name = "public"
 
         net_name = f"net-to-{public_net_name}-{project_name}"
