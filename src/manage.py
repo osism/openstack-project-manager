@@ -520,9 +520,9 @@ def process_project(project):
     )
 
     if "unmanaged" in project:
-        logger.info(f"{project.name} - not managed --> skipping")
+        logger.warning(f"{project.name} - not managed --> skipping")
     elif "quotaclass" not in project:
-        logger.info(f"{project.name} - quotaclass not set --> skipping")
+        logger.warning(f"{project.name} - quotaclass not set --> skipping")
     elif project.quotaclass not in quotaclasses:
         logger.warning(
             f"{project.name} - quotaclass {project.quotaclass} not defined --> skipping"
