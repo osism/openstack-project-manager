@@ -26,6 +26,10 @@ CONF(sys.argv[1:], project=PROJECT_NAME)
 
 UNMANAGED_PROJECTS = ["admin", "service"]
 
+logger_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+logger.remove()
+logger.add(sys.stdout, format=logger_format)
+
 
 def check_bool(project, param):
     return param in project and str(project.get(param)) in [
