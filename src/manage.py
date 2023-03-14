@@ -572,6 +572,15 @@ if CONF.name and not CONF.domain:
         sys.exit(1)
 
     if project.domain_id == "default" and CONF.name in UNMANAGED_PROJECTS:
+
+        # The service project must always be able to access the public network.
+        if CONF.name == "service":
+            if "public_network" in project:
+                public_net_name = project.public_network
+            else:
+                public_net_name = "public"
+            add_external_network(project, public_net_name)
+
         logger.error(f"project {CONF.name} in the default domain is not managed")
         sys.exit(1)
 
