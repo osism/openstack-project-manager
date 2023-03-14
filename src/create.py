@@ -164,10 +164,9 @@ if CONF.create_user:
     else:
         conn.update_user(user, password=password)
 
-    # FIXME(berendt): check existing assignments
     for role in DEFAULT_ROLES:
         try:
-            conn.grant_role(role, user=user.id, project=project.id, domain=domain.id)
+            conn.grant_role(role, user=user.id, project=project.id)
         except:
             pass
 
@@ -190,9 +189,7 @@ if CONF.assign_admin_user:
     if admin_user:
         for role in DEFAULT_ROLES:
             try:
-                conn.grant_role(
-                    role, user=admin_user.id, project=project.id, domain=domain.id
-                )
+                conn.grant_role(role, user=admin_user.id, project=project.id)
             except:
                 pass
 
@@ -211,8 +208,4 @@ if CONF.create_user:
     result.append(["user", name, user.id])
     result.append(["password", password, ""])
 
-print(
-    tabulate(
-        result, headers=["name", "value", "id"], tablefmt="psql"
-    )
-)
+print(tabulate(result, headers=["name", "value", "id"], tablefmt="psql"))
