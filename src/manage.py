@@ -396,7 +396,7 @@ def del_external_network(project, public_net_name):
 def create_service_network(project, net_name, subnet_name, availability_zone):
 
     domain = cloud.get_domain(name_or_id=project.domain_id)
-    project_service = cloud.get_project(name_or_id=f"service-{domain.name}")
+    project_service = cloud.get_project(name_or_id=f"{domain.name}-service")
 
     net = cloud.get_network(net_name, filters={"project_id": project_service.id})
 
