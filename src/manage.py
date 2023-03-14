@@ -541,12 +541,6 @@ def process_project(project):
             create_network_resources(project, domain)
 
 
-# check runtim parameters
-
-if not CONF.name and not CONF.domain:
-    logger.error("project name or domain (or both) required")
-    sys.exit(1)
-
 # load configurations
 
 with open(CONF.classes, "r") as fp:
