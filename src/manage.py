@@ -140,6 +140,7 @@ def manage_external_network_rbacs(project, domain):
             public_net_name = "public"
 
         add_external_network(project, public_net_name)
+
     elif not check_bool(project, "show_public_network") and not check_bool(
         project, "has_public_network"
     ):
@@ -150,8 +151,9 @@ def manage_external_network_rbacs(project, domain):
 
         del_external_network(project, public_net_name)
 
-    if "domain_name" != "default" and check_bool(project, "has_domain_network"):
-        domain_name = domain.name.lower()
+    domain_name = domain.name.lower()
+
+    if domain_name != "default" and check_bool(project, "has_domain_network"):
 
         if "domain_network" in project:
             public_net_name = project.domain_network
@@ -159,7 +161,8 @@ def manage_external_network_rbacs(project, domain):
             public_net_name = f"{domain_name}-public"
 
         add_external_network(project, public_net_name)
-    elif "domain_name" != "default" and not check_bool(project, "has_domain_network"):
+
+    elif domain_name != "default" and not check_bool(project, "has_domain_network"):
         if "domain_network" in project:
             public_net_name = project.domain_network
         else:
