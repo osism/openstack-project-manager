@@ -130,14 +130,25 @@ def check_quota(project, cloud):
                 cloud.set_volume_quotas(project.id, **{key: quota_should_be})
 
 
-def create_external_network_rbacs(project, domain):
-    if check_bool(project, "has_public_network"):
+def manage_external_network_rbacs(project, domain):
+    if check_bool(project, "has_public_network") or check_bool(
+        project, "show_public_network"
+    ):
         if "public_network" in project:
             public_net_name = project.public_network
         else:
             public_net_name = "public"
 
         add_external_network(project, public_net_name)
+    elif not check_bool(project, "show_public_network") and not check_bool(
+        project, "has_public_network"
+    ):
+        if "public_network" in project:
+            public_net_name = project.public_network
+        else:
+            public_net_name = "public"
+
+        del_external_network(project, public_net_name)
 
     if "domain_name" != "default" and check_bool(project, "has_domain_network"):
         domain_name = domain.name.lower()
@@ -148,6 +159,13 @@ def create_external_network_rbacs(project, domain):
             public_net_name = f"{domain_name}-public"
 
         add_external_network(project, public_net_name)
+    elif "domain_name" != "default" and not check_bool(project, "has_domain_network"):
+        if "domain_network" in project:
+            public_net_name = project.domain_network
+        else:
+            public_net_name = f"{domain_name}-public"
+
+        del_external_network(project, public_net_name)
 
 
 def create_network_resources(project, domain):
@@ -243,35 +261,6 @@ def create_network_resources(project, domain):
         else:
             create_service_network(project, net_name, subnet_name, availability_zone)
             add_service_network(project, net_name)
-
-    if check_bool(project, "show_public_network"):
-
-        if "public_network" in project:
-            public_net_name = project.public_network
-        else:
-            public_net_name = "public"
-
-        add_external_network(project, public_net_name)
-
-    if not check_bool(project, "show_public_network") and not check_bool(
-        project, "has_public_network"
-    ):
-
-        if "public_network" in project:
-            public_net_name = project.public_network
-        else:
-            public_net_name = "public"
-
-        del_external_network(project, public_net_name)
-
-    if not check_bool(project, "has_domain_network"):
-
-        if "domain_network" in project:
-            public_net_name = project.domain_network
-        else:
-            public_net_name = f"{domain_name}-public"
-
-        del_external_network(project, public_net_name)
 
 
 def add_service_network(project, net_name):
@@ -538,7 +527,7 @@ def process_project(project):
 
         check_quota(project, cloud)
         check_endpoints(project)
-        create_external_network_rbacs(project, domain)
+        manage_external_network_rbacs(project, domain)
 
         if (
             project.quotaclass not in ["default", "service"]
