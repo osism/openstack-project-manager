@@ -24,6 +24,8 @@ opts = [
 CONF.register_cli_opts(opts)
 CONF(sys.argv[1:], project=PROJECT_NAME)
 
+UNMANAGED_PROJECTS = ["admin", "service"]
+
 
 def check_bool(project, param):
     return param in project and str(project.get(param)) in [
@@ -512,7 +514,9 @@ def check_endpoints(project):
                         KEYSTONE.endpoint_filter.add_endpoint_group_to_project(
                             endpoint_group=endpoint_group.id, project=project.id
                         )
-                        logger.info(f"{project.name} - add endpoint {endpoint} ({interface})")
+                        logger.info(
+                            f"{project.name} - add endpoint {endpoint} ({interface})"
+                        )
                     except KeyError:
                         pass
 
@@ -575,8 +579,8 @@ if CONF.name and not CONF.domain:
         logger.error(f"project {CONF.name} does not exist")
         sys.exit(1)
 
-    if project.domain_id == "default":
-        logger.error("projects in the default domain are not managed")
+    if project.domain_id == "default" and CONF.name in UNMANAGED_PROJECTS:
+        logger.error(f"project {CONF.name} in the default domain is not managed")
         sys.exit(1)
 
     domain = cloud.get_domain(name_or_id=project.domain_id)
@@ -590,8 +594,8 @@ if CONF.name and CONF.domain:
         logger.error(f"domain {CONF.domain} does not exist")
         sys.exit(1)
 
-    if domain.id == "default":
-        logger.error("projects in the default domain are not managed")
+    if domain.id == "default" and CONF.name in UNMANAGED_PROJECTS:
+        logger.error(f"project {CONF.name} in the default domain is not managed")
         sys.exit(1)
 
     logger.info(f"{domain.name} - domain_id = {domain.id}")
@@ -609,11 +613,10 @@ if not CONF.name and CONF.domain:
         logger.error(f"domain {CONF.domain} does not exist")
         sys.exit(1)
 
-    if domain.id == "default":
-        logger.error("projects in the default domain are not managed")
-        sys.exit(1)
-
     logger.info(f"{domain.name} - domain_id = {domain.id}")
 
     for project in cloud.list_projects(domain_id=domain.id):
-        process_project(project)
+        if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
+            logger.error(f"project {project.name} in the default domain is not managed")
+        else:
+            process_project(project)
