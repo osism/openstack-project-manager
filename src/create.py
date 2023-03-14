@@ -174,13 +174,17 @@ if CONF.create_user:
 # Assign the domain admin user to the project
 admin_password = None
 admin_name = f"{CONF.domain}-admin"
+
+# Admin users for a domain are always created in the default domain
+admin_domain_id = "default"
+
 if CONF.assign_admin_user:
-    admin_user = conn.identity.find_user(admin_name, domain_id=domain.id)
+    admin_user = conn.identity.find_user(admin_name, domain_id=admin_domain_id)
 
     if not admin_user and CONF.create_admin_user:
         admin_password = generate_password(CONF.password_length)
         admin_user = conn.create_user(
-            name=admin_name, password=admin_password, domain_id=domain.id
+            name=admin_name, password=admin_password, domain_id=admin_domain_id
         )
 
     if admin_user:
