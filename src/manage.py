@@ -520,11 +520,13 @@ def process_project(project):
     )
 
     if "unmanaged" in project:
-        logger.info(f"{project.name} - not managed")
+        logger.info(f"{project.name} - not managed --> skipping")
     elif "quotaclass" not in project:
-        logger.warning(f"{project.name} - quotaclass not set")
+        logger.info(f"{project.name} - quotaclass not set --> skipping")
     elif project.quotaclass not in quotaclasses:
-        logger.warning(f"{project.name} - quotaclass {project.quotaclass} not defined")
+        logger.warning(
+            f"{project.name} - quotaclass {project.quotaclass} not defined --> skipping"
+        )
     else:
         domain = cloud.get_domain(project.domain_id)
 
