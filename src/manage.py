@@ -572,8 +572,7 @@ if CONF.name and not CONF.domain:
         sys.exit(1)
 
     if project.domain_id == "default" and CONF.name in UNMANAGED_PROJECTS:
-
-        # The service project must always be able to access the public network.
+        # the service project must always be able to access the public network.
         if CONF.name == "service":
             if "public_network" in project:
                 public_net_name = project.public_network
@@ -589,13 +588,21 @@ if CONF.name and not CONF.domain:
 
     process_project(project)
 
-if CONF.name and CONF.domain:
+elif CONF.name and CONF.domain:
     domain = cloud.get_domain(name_or_id=CONF.domain)
     if not domain:
         logger.error(f"domain {CONF.domain} does not exist")
         sys.exit(1)
 
     if domain.id == "default" and CONF.name in UNMANAGED_PROJECTS:
+        # the service project must always be able to access the public network.
+        if CONF.name == "service":
+            if "public_network" in project:
+                public_net_name = project.public_network
+            else:
+                public_net_name = "public"
+            add_external_network(project, public_net_name)
+
         logger.error(f"project {CONF.name} in the default domain is not managed")
         sys.exit(1)
 
@@ -608,7 +615,7 @@ if CONF.name and CONF.domain:
 
     process_project(project)
 
-if not CONF.name and CONF.domain:
+elif not CONF.name and CONF.domain:
     domain = cloud.get_domain(name_or_id=CONF.domain)
     if not domain:
         logger.error(f"domain {CONF.domain} does not exist")
@@ -618,6 +625,38 @@ if not CONF.name and CONF.domain:
 
     for project in cloud.list_projects(domain_id=domain.id):
         if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
-            logger.error(f"project {project.name} in the default domain is not managed")
+            # the service project must always be able to access the public network.
+            if project.name == "service":
+                if "public_network" in project:
+                    public_net_name = project.public_network
+                else:
+                    public_net_name = "public"
+                add_external_network(project, public_net_name)
+
+            logger.warning(
+                f"project {project.name} in the default domain is not managed"
+            )
         else:
             process_project(project)
+
+else:
+    logger.info("Processing all domains")
+    domains = cloud.list_domains()
+
+    for domain in domains:
+        logger.info(f"{domain.name} - domain_id = {domain.id}")
+
+        for project in cloud.list_projects(domain_id=domain.id):
+            if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
+                # the service project must always be able to access the public network.
+                if project.name == "service":
+                    if "public_network" in project:
+                        public_net_name = project.public_network
+                    else:
+                        public_net_name = "public"
+                    add_external_network(project, public_net_name)
+                logger.warning(
+                    f"project {project.name} in the default domain is not managed"
+                )
+            else:
+                process_project(project)
