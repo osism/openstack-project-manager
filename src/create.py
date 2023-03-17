@@ -140,12 +140,16 @@ keystone.projects.update(
 )
 keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
-# Tag service projects
 if CONF.name == "service":
+    # Tag service projects
     keystone.projects.update(project=project.id, is_servivce_project=str(True))
 
-    # for a service project always use the quota class service
+    # For a service project always use the quota class service
     keystone.projects.update(project=project.id, quotaclass="service")
+
+if CONF.name == "images":
+    # For an images project always use the quota class default
+    keystone.projects.update(project=project.id, quotaclass="default")
 
 # Set other parameters of the project
 keystone.projects.update(project=project.id, owner=CONF.owner)
