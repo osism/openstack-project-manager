@@ -171,7 +171,8 @@ def manage_external_network_rbacs(project, domain):
         else:
             public_net_name = f"{domain_name}-service"
 
-        add_external_network(project, public_net_name)
+        # add_external_network(project, public_net_name)
+        add_service_network(project, public_net_name)
 
     elif domain_name != "default" and not check_bool(project, "has_service_network"):
         if "service_network" in project:
@@ -179,7 +180,8 @@ def manage_external_network_rbacs(project, domain):
         else:
             public_net_name = f"{domain_name}-service"
 
-        del_external_network(project, public_net_name)
+        # del_external_network(project, public_net_name)
+        del_service_network(project, public_net_name)
 
 
 def create_network_resources(project, domain):
@@ -260,26 +262,6 @@ def create_network_resources(project, domain):
                 availability_zone,
             )
 
-    if check_bool(project, "has_shared_router"):
-
-        if "public_network" in project:
-            availability_zone = "nova"
-            public_net_name = project.public_network
-        else:
-            availability_zone = "nova"
-            public_net_name = "public"
-
-        net_name = f"net-to-{public_net_name}-{project_name}"
-        subnet_name = f"subnet-to-{public_net_name}-{project_name}"
-
-        if check_bool(project, "is_service_project"):
-            logger.info(
-                f"{project.name} - it's a service project, network resources are not created"
-            )
-        else:
-            create_service_network(project, net_name, subnet_name, availability_zone)
-            add_service_network(project, net_name)
-
 
 def add_service_network(project, net_name):
 
@@ -315,6 +297,42 @@ def add_service_network(project, net_name):
                     }
                 }
             )
+
+    except neutronclient.common.exceptions.Conflict:
+        pass
+    except AttributeError:
+        pass
+
+
+def del_service_network(project, public_net_name):
+
+    try:
+        logger.info(
+            f"{project.name} - check if service rbac policy must be deleted ({public_net_name})"
+        )
+
+        public_net = cloud.get_network(public_net_name)
+        rbac_policies = neutron.list_rbac_policies(
+            **{
+                "target_tenant": project.id,
+                "action": "access_as_shared",
+                "object_type": "network",
+                "object_id": public_net.id,
+                "fields": "id",
+            }
+        )
+
+        if len(rbac_policies["rbac_policies"]) == 1:
+            logger.info(
+                f"{project.name} - service rbac policy has to be deleted ({public_net_name})"
+            )
+
+        if not CONF.dry_run and len(rbac_policies["rbac_policies"]) == 1:
+            logger.info(
+                f"{project.name} - delete service rbac policy ({public_net_name})"
+            )
+            rbac_policy = rbac_policies["rbac_policies"][0]["id"]
+            neutron.delete_rbac_policy(rbac_policy)
 
     except neutronclient.common.exceptions.Conflict:
         pass
