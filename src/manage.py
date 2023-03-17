@@ -517,6 +517,29 @@ def check_endpoints(project):
                         pass
 
 
+def share_image_with_project(image, project):
+    member = cloud.image.find_member(project.id, image.id)
+
+    if not member:
+        logger.info(f"{project.name} - add shared image '{image.name}'")
+        member = cloud.image.add_member(image.id, member_id=project.id)
+
+        if member.status != "accepted":
+            cloud.image.update_member(member, image.id, status="accepted")
+
+
+def share_images(project, domain):
+    # get the images project
+    project_images = cloud.get_project(name_or_id=f"{domain.name}-images")
+
+    if project_images:
+        # only images owned by the images project can be shared
+        images = cloud.image.images(owner=project_images.id, visibility="shared")
+
+        for image in images:
+            share_image_with_project(image, project)
+
+
 def process_project(project):
 
     logger.info(
@@ -537,6 +560,9 @@ def process_project(project):
         check_quota(project, cloud)
         check_endpoints(project)
         manage_external_network_rbacs(project, domain)
+
+        if check_bool(project, "has_shared_images"):
+            share_images(project, domain)
 
         if (
             project.quotaclass not in ["default", "service"]

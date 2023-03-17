@@ -31,6 +31,7 @@ opts = [
         "has-public-network", help="Has public network infrastructure", default=True
     ),
     cfg.BoolOpt("has-shared-router", help="Has shared router", default=False),
+    cfg.BoolOpt("has-shared-images", help="Has shared images", default=True),
     cfg.BoolOpt("random", help="Generate random names", default=False),
     cfg.BoolOpt(
         "managed-network-resources",
@@ -151,6 +152,12 @@ if CONF.name == "images":
     # For an images project always use the quota class default
     keystone.projects.update(project=project.id, quotaclass="default")
     keystone.projects.update(project=project.id, quota_router=0)
+    # Only non-images projects can have shared images
+    keystone.projects.update(project=project.id, has_shared_images=str(False))
+else:
+    keystone.projects.update(
+        project=project.id, has_shared_images=str(CONF.has_shared_images)
+    )
 
 # Set other parameters of the project
 keystone.projects.update(project=project.id, owner=CONF.owner)
