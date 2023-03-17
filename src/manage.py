@@ -42,6 +42,13 @@ def check_bool(project, param):
 
 def check_quota(project, cloud):
 
+    if project.name == "service":
+        quotaclass = "service"
+    elif project.name == "admin":
+        quotaclass = "admin"
+    else:
+        quotaclass = project.quotaclass
+
     if "quotamultiplier" in project:
         multiplier = int(project.quotamultiplier)
     else:
@@ -65,7 +72,7 @@ def check_quota(project, cloud):
     if "quota_router" in project:
         quota_router = int(project.quota_router)
     else:
-        quota_router = quotaclasses[project.quotaclass]["network"]["router"]
+        quota_router = quotaclasses[quotaclass]["network"]["router"]
 
         if check_bool(project, "has_public_network") and not check_bool(
             project, "is_servivce_project"
@@ -81,13 +88,13 @@ def check_quota(project, cloud):
 
     logger.info(f"{project.name} - check network quota")
     quotanetwork = cloud.get_network_quotas(project.id)
-    for key in quotaclasses[project.quotaclass]["network"]:
+    for key in quotaclasses[quotaclass]["network"]:
 
         if key == "router":
             quota_should_be = quota_router
         else:
             quota_should_be = (
-                quotaclasses[project.quotaclass]["network"][key] * multiplier_network
+                quotaclasses[quotaclass]["network"][key] * multiplier_network
             )
 
         if quota_should_be != quotanetwork[key]:
@@ -99,7 +106,7 @@ def check_quota(project, cloud):
 
     logger.info(f"{project.name} - check compute quota")
     quotacompute = cloud.get_compute_quotas(project.id)
-    for key in quotaclasses[project.quotaclass]["compute"]:
+    for key in quotaclasses[quotaclass]["compute"]:
         if key in [
             "injected_file_content_bytes",
             "metadata_items",
@@ -109,7 +116,7 @@ def check_quota(project, cloud):
         else:
             tmultiplier = multiplier_compute
 
-        quota_should_be = quotaclasses[project.quotaclass]["compute"][key] * tmultiplier
+        quota_should_be = quotaclasses[quotaclass]["compute"][key] * tmultiplier
         if quota_should_be != quotacompute[key]:
             logger.info(
                 f"{project.name} - compute[{key}] = {quota_should_be} != {quotacompute[key]}"
@@ -119,13 +126,13 @@ def check_quota(project, cloud):
 
     logger.info(f"{project.name} - check volume quota")
     quotavolume = cloud.get_volume_quotas(project.id)
-    for key in quotaclasses[project.quotaclass]["volume"]:
+    for key in quotaclasses[quotaclass]["volume"]:
         if key in ["per_volume_gigabytes"]:
             tmultiplier = 1
         else:
             tmultiplier = multiplier_storage
 
-        quota_should_be = quotaclasses[project.quotaclass]["volume"][key] * tmultiplier
+        quota_should_be = quotaclasses[quotaclass]["volume"][key] * tmultiplier
         if quota_should_be != quotavolume[key]:
             logger.info(
                 f"{project.name} - volume[{key}] = {quota_should_be} != {quotavolume[key]}"
@@ -606,8 +613,11 @@ if CONF.name and not CONF.domain:
                 public_net_name = "public"
             add_external_network(project, public_net_name)
 
-        logger.error(f"project {CONF.name} in the default domain is not managed")
-        sys.exit(1)
+        # On the service and admin project, the quota is always managed as well.
+        check_quota(project, cloud)
+
+        logger.warning(f"project {CONF.name} in the default domain is not managed")
+        sys.exit(0)
 
     domain = cloud.get_domain(name_or_id=project.domain_id)
     logger.info(f"{domain.name} - domain_id = {domain.id}")
@@ -621,6 +631,8 @@ elif CONF.name and CONF.domain:
         sys.exit(1)
 
     if domain.id == "default" and CONF.name in UNMANAGED_PROJECTS:
+        project = cloud.get_project(name_or_id=CONF.name, domain_id=domain.id)
+
         # the service project must always be able to access the public network.
         if CONF.name == "service":
             if "public_network" in project:
@@ -629,8 +641,11 @@ elif CONF.name and CONF.domain:
                 public_net_name = "public"
             add_external_network(project, public_net_name)
 
-        logger.error(f"project {CONF.name} in the default domain is not managed")
-        sys.exit(1)
+        # On the service and admin project, the quota is always managed as well.
+        check_quota(project, cloud)
+
+        logger.warning(f"project {CONF.name} in the default domain is not managed")
+        sys.exit(0)
 
     logger.info(f"{domain.name} - domain_id = {domain.id}")
 
@@ -659,6 +674,9 @@ elif not CONF.name and CONF.domain:
                     public_net_name = "public"
                 add_external_network(project, public_net_name)
 
+            # On the service and admin project, the quota is always managed as well.
+            check_quota(project, cloud)
+
             logger.warning(
                 f"project {project.name} in the default domain is not managed"
             )
@@ -684,5 +702,8 @@ else:
                 logger.warning(
                     f"project {project.name} in the default domain is not managed"
                 )
+
+                # On the service and admin project, the quota is always managed as well.
+                check_quota(project, cloud)
             else:
                 process_project(project)

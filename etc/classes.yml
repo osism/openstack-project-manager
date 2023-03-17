@@ -1,4 +1,11 @@
 ---
+admin:
+  compute: {}
+  network:
+    rbac_policy: 65536
+    router: 1
+  volume: {}
+
 default:
   compute:
     cores: 0
