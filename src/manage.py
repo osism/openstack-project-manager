@@ -75,14 +75,14 @@ def check_quota(project, cloud):
         quota_router = quotaclasses[quotaclass]["network"]["router"]
 
         if check_bool(project, "has_public_network") and not check_bool(
-            project, "is_servivce_project"
+            project, "is_service_project"
         ):
             quota_router = quota_router + 1
 
         if (
             "domain_name" != "default"
             and check_bool(project, "has_service_network")
-            and not check_bool(project, "is_servivce_project")
+            and not check_bool(project, "is_service_project")
         ):
             quota_router = quota_router + 1
 
@@ -210,15 +210,15 @@ def create_network_resources(project, domain):
             availability_zone = "nova"
             public_net_name = "public"
 
-        net_name = f"net-to-{public_net_name}-{project_name}"
-        router_name = f"router-to-{public_net_name}-{project_name}"
-        subnet_name = f"subnet-to-{public_net_name}-{project_name}"
-
         if check_bool(project, "is_service_project"):
             logger.info(
                 f"{project.name} - it's a service project, network resources are not created"
             )
         else:
+            net_name = f"net-to-{public_net_name}-{project_name}"
+            router_name = f"router-to-{public_net_name}-{project_name}"
+            subnet_name = f"subnet-to-{public_net_name}-{project_name}"
+
             create_network_with_router(
                 project,
                 net_name,
@@ -238,15 +238,19 @@ def create_network_resources(project, domain):
             availability_zone = "nova"
             public_net_name = f"{domain_name}-service"
 
-        net_name = f"net-to-{public_net_name}-{project_name}"
-        router_name = f"router-to-{public_net_name}-{project_name}"
-        subnet_name = f"subnet-to-{public_net_name}-{project_name}"
-
         if check_bool(project, "is_service_project"):
-            logger.info(
-                f"{project.name} - it's a service project, network resources are not created"
+            create_service_network(
+                project,
+                public_net_name,
+                f"subnet-{public_net_name}",
+                availability_zone,
+                project.service_network_cidr,
             )
         else:
+            net_name = f"net-to-{public_net_name}-{project_name}"
+            router_name = f"router-to-{public_net_name}-{project_name}"
+            subnet_name = f"subnet-to-{public_net_name}-{project_name}"
+
             create_network_with_router(
                 project,
                 net_name,
@@ -396,7 +400,9 @@ def del_external_network(project, public_net_name):
         pass
 
 
-def create_service_network(project, net_name, subnet_name, availability_zone):
+def create_service_network(
+    project, net_name, subnet_name, availability_zone, subnet_cidr=None
+):
 
     domain = cloud.get_domain(name_or_id=project.domain_id)
     project_service = cloud.get_project(name_or_id=f"{domain.name}-service")
@@ -413,18 +419,30 @@ def create_service_network(project, net_name, subnet_name, availability_zone):
                 availability_zone_hints=[availability_zone],
             )
 
+            # Add the network to the same project as shared so that ports can be created in it
+            add_service_network(project_service, net_name)
+
     subnet = cloud.get_subnet(subnet_name, filters={"project_id": project_service.id})
     if not subnet:
         logger.info(f"{project.name} - create service subnet ({subnet_name})")
 
         if not CONF.dry_run:
-            subnet = cloud.create_subnet(
-                net.id,
-                tenant_id=project_service.id,
-                subnet_name=subnet_name,
-                use_default_subnetpool=True,
-                enable_dhcp=True,
-            )
+            if subnet_cidr:
+                subnet = cloud.create_subnet(
+                    net.id,
+                    tenant_id=project_service.id,
+                    subnet_name=subnet_name,
+                    cidr=subnet_cidr,
+                    enable_dhcp=True,
+                )
+            else:
+                subnet = cloud.create_subnet(
+                    net.id,
+                    tenant_id=project_service.id,
+                    subnet_name=subnet_name,
+                    use_default_subnetpool=True,
+                    enable_dhcp=True,
+                )
 
 
 def create_network(project, net_name, subnet_name, availability_zone):
@@ -574,6 +592,9 @@ def process_project(project):
         if (
             project.quotaclass not in ["default", "service"]
             and "managed_network_resources" in project
+        ) or (
+            check_bool(project, "is_service_project")
+            and check_bool(project, "has_service_network")
         ):
             create_network_resources(project, domain)
 

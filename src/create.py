@@ -58,6 +58,7 @@ opts = [
     cfg.StrOpt("password", help="Password", default=None),
     cfg.StrOpt("public-network", help="Public network", default="public"),
     cfg.StrOpt("quota-class", help="Quota class", default="basic"),
+    cfg.StrOpt("service-network-cidr", help="Service network CIDR", default=""),
 ]
 CONF.register_cli_opts(opts)
 
@@ -130,6 +131,9 @@ keystone.projects.update(
     project=project.id, has_service_network=str(CONF.has_service_network)
 )
 keystone.projects.update(
+    project=project.id, service_network_cidr=str(CONF.service_network_cidr)
+)
+keystone.projects.update(
     project=project.id, has_shared_router=str(CONF.has_shared_router)
 )
 keystone.projects.update(
@@ -143,7 +147,7 @@ keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
 if CONF.name == "service":
     # Tag service projects
-    keystone.projects.update(project=project.id, is_servivce_project=str(True))
+    keystone.projects.update(project=project.id, is_service_project=str(True))
 
     # For a service project always use the quota class service
     keystone.projects.update(project=project.id, quotaclass="service")
