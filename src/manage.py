@@ -74,7 +74,7 @@ def check_quota(project, cloud):
 
         if (
             "domain_name" != "default"
-            and check_bool(project, "has_domain_network")
+            and check_bool(project, "has_service_network")
             and not check_bool(project, "is_servivce_project")
         ):
             quota_router = quota_router + 1
@@ -157,20 +157,20 @@ def manage_external_network_rbacs(project, domain):
 
     domain_name = domain.name.lower()
 
-    if domain_name != "default" and check_bool(project, "has_domain_network"):
+    if domain_name != "default" and check_bool(project, "has_service_network"):
 
-        if "domain_network" in project:
-            public_net_name = project.domain_network
+        if "service_network" in project:
+            public_net_name = project.service_network
         else:
-            public_net_name = f"{domain_name}-public"
+            public_net_name = f"{domain_name}-service"
 
         add_external_network(project, public_net_name)
 
-    elif domain_name != "default" and not check_bool(project, "has_domain_network"):
-        if "domain_network" in project:
-            public_net_name = project.domain_network
+    elif domain_name != "default" and not check_bool(project, "has_service_network"):
+        if "service_network" in project:
+            public_net_name = project.service_network
         else:
-            public_net_name = f"{domain_name}-public"
+            public_net_name = f"{domain_name}-service"
 
         del_external_network(project, public_net_name)
 
@@ -221,15 +221,15 @@ def create_network_resources(project, domain):
                 availability_zone,
             )
 
-    if "domain_name" != "default" and check_bool(project, "has_domain_network"):
-        logger.info(f"{project.name} - check domain network resources")
+    if "domain_name" != "default" and check_bool(project, "has_service_network"):
+        logger.info(f"{project.name} - check service network resources")
 
-        if "domain_network" in project:
+        if "service_network" in project:
             availability_zone = "nova"
-            public_net_name = project.domain_network
+            public_net_name = project.service_network
         else:
             availability_zone = "nova"
-            public_net_name = f"{domain_name}-public"
+            public_net_name = f"{domain_name}-service"
 
         net_name = f"net-to-{public_net_name}-{project_name}"
         router_name = f"router-to-{public_net_name}-{project_name}"
