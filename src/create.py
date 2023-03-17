@@ -150,6 +150,7 @@ if CONF.name == "service":
 if CONF.name == "images":
     # For an images project always use the quota class default
     keystone.projects.update(project=project.id, quotaclass="default")
+    keystone.projects.update(project=project.id, quota_router=0)
 
 # Set other parameters of the project
 keystone.projects.update(project=project.id, owner=CONF.owner)
