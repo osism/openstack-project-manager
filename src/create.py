@@ -30,7 +30,6 @@ opts = [
     cfg.BoolOpt(
         "has-public-network", help="Has public network infrastructure", default=True
     ),
-    cfg.BoolOpt("has-shared-router", help="Has shared router", default=False),
     cfg.BoolOpt("has-shared-images", help="Has shared images", default=True),
     cfg.BoolOpt("random", help="Generate random names", default=False),
     cfg.BoolOpt(
@@ -134,14 +133,11 @@ keystone.projects.update(
     project=project.id, service_network_cidr=str(CONF.service_network_cidr)
 )
 keystone.projects.update(
-    project=project.id, has_shared_router=str(CONF.has_shared_router)
-)
-keystone.projects.update(
     project=project.id, has_public_network=str(CONF.has_public_network)
 )
 keystone.projects.update(
     project=project.id,
-    show_public_network=str(CONF.has_public_network or CONF.has_shared_router),
+    show_public_network=str(CONF.has_public_network),
 )
 keystone.projects.update(project=project.id, public_network=CONF.public_network)
 
