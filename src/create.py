@@ -154,6 +154,11 @@ if CONF.name == "images":
     keystone.projects.update(project=project.id, quota_router=0)
     # Only non-images projects can have shared images
     keystone.projects.update(project=project.id, has_shared_images=str(False))
+    keystone.projects.update(project=project.id, has_public_network=str(False))
+    keystone.projects.update(
+        project=project.id,
+        show_public_network=str(False),
+    )
 else:
     keystone.projects.update(
         project=project.id, has_shared_images=str(CONF.has_shared_images)
