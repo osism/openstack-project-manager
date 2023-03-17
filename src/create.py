@@ -25,7 +25,7 @@ opts = [
         default=True,
     ),
     cfg.BoolOpt(
-        "has-domain-network", help="Has domain network infrastructure", default=False
+        "has-service-network", help="Has service network infrastructure", default=False
     ),
     cfg.BoolOpt(
         "has-public-network", help="Has public network infrastructure", default=True
@@ -126,7 +126,7 @@ if CONF.quota_router:
 
 # Set network parameters of the project
 keystone.projects.update(
-    project=project.id, has_domain_network=str(CONF.has_domain_network)
+    project=project.id, has_service_network=str(CONF.has_service_network)
 )
 keystone.projects.update(
     project=project.id, has_shared_router=str(CONF.has_shared_router)
