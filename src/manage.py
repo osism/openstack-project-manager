@@ -11,6 +11,7 @@ PROJECT_NAME = "openstack-project-manager"
 CONF = cfg.CONF
 opts = [
     cfg.BoolOpt("dry-run", help="Do not really do anything", default=False),
+    cfg.BoolOpt("manage-endpoints", help="Manage endpoints", default=False),
     cfg.StrOpt(
         "classes", help="Path to the classes.yml file", default="etc/classes.yml"
     ),
@@ -601,7 +602,9 @@ def process_project(project):
         domain = cloud.get_domain(project.domain_id)
 
         check_quota(project, cloud)
-        check_endpoints(project)
+
+        if CONF.manage_endpoints:
+            check_endpoints(project)
         manage_external_network_rbacs(project, domain)
 
         if check_bool(project, "has_shared_images"):
