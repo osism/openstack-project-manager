@@ -125,3 +125,33 @@ okeanos:
     per_volume_gigabytes: 200
     snapshots: 100
     volumes: 100
+
+testbed:
+  compute:
+    cores: 28
+    injected_file_content_bytes: 0
+    injected_file_path_bytes: 0
+    injected_files: 0
+    instances: 4
+    key_pairs: 5
+    metadata_items: 128
+    ram: 106496
+    server_group_members: 4
+    server_groups: 2
+  network:
+    floatingip: 1
+    network: 2
+    port: 20
+    rbac_policy: 10
+    router: 2
+    security_group: 5
+    security_group_rule: 20
+    subnet: 2
+    subnetpool: 1
+  volume:
+    backup_gigabytes: 40
+    backups: 8
+    gigabytes: 200
+    per_volume_gigabytes: 200
+    snapshots: 4
+    volumes: 10
