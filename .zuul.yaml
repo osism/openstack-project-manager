@@ -10,3 +10,7 @@
       jobs:
         - flake8
         - yamllint
+    periodic-daily:
+      jobs:
+        - flake8
+        - yamllint
