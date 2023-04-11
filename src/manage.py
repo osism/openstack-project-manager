@@ -267,6 +267,11 @@ def create_network_resources(project, domain):
 
 def add_service_network(project, net_name):
 
+    if "service_network_type" in project:
+        service_network_type = f"access_as_{project.service_network_type}"
+    else:
+        service_network_type = "access_as_shared"
+
     try:
         logger.info(
             f"{project.name} - check if service rbac policy must be created ({net_name})"
@@ -275,7 +280,7 @@ def add_service_network(project, net_name):
         rbac_policies = neutron.list_rbac_policies(
             **{
                 "target_tenant": project.id,
-                "action": "access_as_shared",
+                "action": service_network_type,
                 "object_type": "network",
                 "object_id": net.id,
                 "fields": "id",
@@ -293,7 +298,7 @@ def add_service_network(project, net_name):
                 {
                     "rbac_policy": {
                         "target_tenant": project.id,
-                        "action": "access_as_shared",
+                        "action": service_network_type,
                         "object_type": "network",
                         "object_id": net.id,
                     }
