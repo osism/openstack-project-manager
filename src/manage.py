@@ -1,3 +1,4 @@
+import math
 import sys
 
 from loguru import logger
@@ -584,6 +585,34 @@ def share_images(project, domain):
             share_image_with_project(image, project)
 
 
+def cache_images(domain):
+    # get the images project
+    project_images = cloud.get_project(name_or_id=f"{domain.name}-images")
+
+    if project_images:
+        # only images owned by the images project should be cached
+        images = cloud.image.images(owner=project_images.id, visibility="shared")
+
+        cloud_domain_admin = openstack.connect(
+            cloud=f"opm-{domain.name}-admin", project_name=project_images.name
+        )
+
+        for image in images:
+            volume_name = f"cache-{image.id}"
+            volume = cloud_domain_admin.volume.find_volume(name_or_id=volume_name)
+
+            if not volume:
+                logger.info(
+                    f"{domain.name} - prepare image cache for '{image.name}' ({image.id})"
+                )
+
+                # convert bytes to gigabytes and always round up
+                volume_size = math.ceil(image.size / (1024 * 1024 * 1024))
+                cloud_domain_admin.volume.create_volume(
+                   name=volume_name, size=volume_size, imageRef=image.id
+                )
+
+
 def process_project(project):
 
     logger.info(
@@ -725,6 +754,8 @@ elif not CONF.name and CONF.domain:
         else:
             process_project(project)
 
+    cache_images(domain)
+
 else:
     logger.info("Processing all domains")
     domains = cloud.list_domains()
@@ -749,3 +780,5 @@ else:
                 check_quota(project, cloud)
             else:
                 process_project(project)
+
+        cache_images(domain)
