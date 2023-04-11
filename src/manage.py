@@ -608,6 +608,9 @@ def cache_images(domain):
 
                 # convert bytes to gigabytes and always round up
                 volume_size = math.ceil(image.size / (1024 * 1024 * 1024))
+                if volume_size < image.min_disk:
+                    volume_size = image.min_disk
+
                 cloud_domain_admin.volume.create_volume(
                    name=volume_name, size=volume_size, imageRef=image.id
                 )
