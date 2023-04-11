@@ -532,6 +532,7 @@
         },
         "prettytable": {
             "hashes": [
+                "sha256:ef8334ee40b7ec721651fc4d37ecc7bb2ef55fde5098d994438f0dfdaa385c0c",
                 "sha256:f4aaf2ed6e6062a82fd2e6e5289bbbe705ec2788fe401a3a1f62a1cea55526d2"
             ],
             "markers": "python_version >= '3.7'",
@@ -543,13 +544,6 @@
                 "sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206"
             ],
             "version": "==2.21"
-        },
-        "pyinotify": {
-            "hashes": [
-                "sha256:9c998a5d7606ca835065cdabc013ae6c66eb9ea76a00a1e3bc6e0cfe2b4f71f4"
-            ],
-            "markers": "sys_platform != 'win32' and sys_platform != 'darwin' and sys_platform != 'sunos5'",
-            "version": "==0.9.6"
         },
         "pyparsing": {
             "hashes": [
