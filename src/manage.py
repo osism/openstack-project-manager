@@ -602,6 +602,16 @@ def cache_images(domain):
             cloud=f"opm-{domain.name}-admin", project_name=project_images.name
         )
 
+        # remove cache volume for which there is no image anymore
+        volumes = cloud_domain_admin.volume.volumes(owner=project_images.id)
+        for volume in volumes:
+            image = cloud_domain_admin.image.find_image(name_or_id=volume.name[6:])
+            if not image:
+                logger.info(
+                    f"{domain.name} - remove cache volume {volume.name} for which there is no image anymore"
+                )
+                cloud_domain_admin.volume.delete_volume(volume)
+
         for image in images:
             volume_name = f"cache-{image.id}"
             volume = cloud_domain_admin.volume.find_volume(name_or_id=volume_name)
@@ -617,7 +627,7 @@ def cache_images(domain):
                     volume_size = image.min_disk
 
                 cloud_domain_admin.volume.create_volume(
-                   name=volume_name, size=volume_size, imageRef=image.id
+                    name=volume_name, size=volume_size, imageRef=image.id
                 )
 
 
