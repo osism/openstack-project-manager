@@ -188,9 +188,10 @@ if CONF.create_user:
     else:
         conn.update_user(user, password=password)
 
-    for role in DEFAULT_ROLES:
+    for role_name in DEFAULT_ROLES:
         try:
-            conn.grant_role(role, user=user.id, project=project.id)
+            role = conn.identity.find_role(role_name)
+            conn.identity.assign_project_role_to_user(project.id, user.id, role.id)
         except:
             pass
 
@@ -211,9 +212,12 @@ if CONF.assign_admin_user:
         )
 
     if admin_user:
-        for role in DEFAULT_ROLES:
+        for role_name in DEFAULT_ROLES:
             try:
-                conn.grant_role(role, user=admin_user.id, project=project.id)
+                role = conn.identity.find_role(role_name)
+                conn.identity.assign_project_role_to_user(
+                    project.id, admin_user.id, role.id
+                )
             except:
                 pass
 
