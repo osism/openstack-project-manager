@@ -183,7 +183,7 @@ testbed:
   volume:
     backup_gigabytes: 40
     backups: 8
-    gigabytes: 200
+    gigabytes: 300
     per_volume_gigabytes: 200
     snapshots: 4
     volumes: 15
