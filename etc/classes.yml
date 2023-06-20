@@ -186,4 +186,4 @@ testbed:
     gigabytes: 200
     per_volume_gigabytes: 200
     snapshots: 4
-    volumes: 10
+    volumes: 15
