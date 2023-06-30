@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2e8f9e4305bc56630e318673b6a87db14d4f33dc80167287891a2ee8a63719ad"
+            "sha256": "e3d49b33cdbea83a1bc37c2065b60dabd3443ba7903408f0a18e272cf0bfe965"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -253,6 +253,14 @@
             ],
             "markers": "python_version >= '3.5'",
             "version": "==5.1.1"
+        },
+        "deepmerge": {
+            "hashes": [
+                "sha256:4c27a0db5de285e1a7ceac7dbc1531deaa556b627dea4900c8244581ecdfea2d",
+                "sha256:59e6ef80b77dc52af3882a1ea78da22bcfc91ae9cdabc0c80729049fe295ff8b"
+            ],
+            "index": "pypi",
+            "version": "==1.1.0"
         },
         "dogpile.cache": {
             "hashes": [
@@ -545,13 +553,6 @@
                 "sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206"
             ],
             "version": "==2.21"
-        },
-        "pyinotify": {
-            "hashes": [
-                "sha256:9c998a5d7606ca835065cdabc013ae6c66eb9ea76a00a1e3bc6e0cfe2b4f71f4"
-            ],
-            "markers": "sys_platform != 'win32' and sys_platform != 'darwin' and sys_platform != 'sunos5'",
-            "version": "==0.9.6"
         },
         "pyparsing": {
             "hashes": [
