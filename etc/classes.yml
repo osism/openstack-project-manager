@@ -39,44 +39,20 @@ default:
 # Special project for the share images function. Volumes can be
 # used to fill the image cache.
 images:
-  compute:
-    cores: 0
-    injected_file_content_bytes: 10240
-    injected_file_path_bytes: 255
-    injected_files: 5
-    instances: 0
-    key_pairs: 0
-    metadata_items: 128
-    ram: 0
-    server_group_members: 0
-    server_groups: 0
-  network:
-    floatingip: 0
-    network: 0
-    port: 0
-    rbac_policy: 0
-    router: 0
-    security_group: 0
-    security_group_rule: 0
-    subnet: 0
-    subnetpool: 0
+  parent: default
+  compute: {}
+  network: {}
   volume:
-    backup_gigabytes: 0
-    backups: 0
     gigabytes: 1000
     per_volume_gigabytes: 25
-    snapshots: 0
     volumes: 100
 
 service:
+  parent: default
   compute:
     cores: 256
-    injected_file_content_bytes: 10240
-    injected_file_path_bytes: 255
-    injected_files: 5
     instances: 256
     key_pairs: 256
-    metadata_items: 128
     ram: 262144
     server_group_members: 256
     server_groups: 256
@@ -90,23 +66,14 @@ service:
     security_group_rule: 1024
     subnet: 256
     subnetpool: 256
-  volume:
-    backup_gigabytes: 0
-    backups: 0
-    gigabytes: 0
-    per_volume_gigabytes: 0
-    snapshots: 0
-    volumes: 0
+  volume: {}
 
 basic:
+  parent: default
   compute:
     cores: 4
-    injected_file_content_bytes: 10240
-    injected_file_path_bytes: 255
-    injected_files: 5
     instances: 4
     key_pairs: 4
-    metadata_items: 128
     ram: 8192
     server_group_members: 4
     server_groups: 4
@@ -129,14 +96,11 @@ basic:
     volumes: 4
 
 okeanos:
+  parent: default
   compute:
     cores: 50
-    injected_file_content_bytes: 10240
-    injected_file_path_bytes: 255
-    injected_files: 5
     instances: 50
     key_pairs: 5
-    metadata_items: 128
     ram: 131072
     server_group_members: 100
     server_groups: 100
@@ -159,6 +123,7 @@ okeanos:
     volumes: 100
 
 testbed:
+  parent: default
   compute:
     cores: 28
     injected_file_content_bytes: 0
@@ -166,7 +131,6 @@ testbed:
     injected_files: 0
     instances: 4
     key_pairs: 5
-    metadata_items: 128
     ram: 106496
     server_group_members: 4
     server_groups: 2

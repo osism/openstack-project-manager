@@ -1,6 +1,7 @@
 import math
 import sys
 
+from deepmerge import always_merger
 from loguru import logger
 import neutronclient
 import openstack
@@ -33,6 +34,21 @@ logger.remove()
 logger.add(sys.stdout, format=logger_format)
 
 
+def get_quotaclass(quotaclass):
+    with open(CONF.classes, "r") as fp:
+        quotaclasses = yaml.load(fp, Loader=yaml.SafeLoader)
+
+    if quotaclass not in quotaclasses:
+        return None
+
+    result = quotaclasses[quotaclass]
+
+    if "parent" in result and result["parent"] in quotaclasses:
+        return always_merger.merge(quotaclasses[result["parent"]], result)
+
+    return result
+
+
 def check_bool(project, param):
     return param in project and str(project.get(param)) in [
         "true",
@@ -45,11 +61,19 @@ def check_bool(project, param):
 def check_quota(project, cloud):
 
     if project.name == "service":
-        quotaclass = "service"
+        quotaclass = get_quotaclass("service")
     elif project.name == "admin":
-        quotaclass = "admin"
+        quotaclass = get_quotaclass("admin")
     else:
-        quotaclass = project.quotaclass
+        quotaclass = get_quotaclass(project.quotaclass)
+
+    if quotaclass:
+        logger.info(f"{project.name} - quotaclass {project.quotaclass}")
+    else:
+        logger.warning(
+            f"{project.name} - quotaclass {project.quotaclass} not defined --> skipping"
+        )
+        return
 
     if "quotamultiplier" in project:
         multiplier = int(project.quotamultiplier)
@@ -74,7 +98,7 @@ def check_quota(project, cloud):
     if "quota_router" in project:
         quota_router = int(project.quota_router)
     else:
-        quota_router = quotaclasses[quotaclass]["network"]["router"]
+        quota_router = quotaclass["network"]["router"]
 
         if check_bool(project, "has_public_network") and not check_bool(
             project, "is_service_project"
@@ -90,14 +114,12 @@ def check_quota(project, cloud):
 
     logger.info(f"{project.name} - check network quota")
     quotanetwork = cloud.get_network_quotas(project.id)
-    for key in quotaclasses[quotaclass]["network"]:
+    for key in quotaclass["network"]:
 
         if key == "router":
             quota_should_be = quota_router
         else:
-            quota_should_be = (
-                quotaclasses[quotaclass]["network"][key] * multiplier_network
-            )
+            quota_should_be = quotaclass["network"][key] * multiplier_network
 
         if quota_should_be != quotanetwork[key]:
             logger.info(
@@ -108,7 +130,7 @@ def check_quota(project, cloud):
 
     logger.info(f"{project.name} - check compute quota")
     quotacompute = cloud.get_compute_quotas(project.id)
-    for key in quotaclasses[quotaclass]["compute"]:
+    for key in quotaclass["compute"]:
         if key in [
             "injected_file_content_bytes",
             "metadata_items",
@@ -118,7 +140,7 @@ def check_quota(project, cloud):
         else:
             tmultiplier = multiplier_compute
 
-        quota_should_be = quotaclasses[quotaclass]["compute"][key] * tmultiplier
+        quota_should_be = quotaclass["compute"][key] * tmultiplier
         if quota_should_be != quotacompute[key]:
             logger.info(
                 f"{project.name} - compute[{key}] = {quota_should_be} != {quotacompute[key]}"
@@ -128,13 +150,13 @@ def check_quota(project, cloud):
 
     logger.info(f"{project.name} - check volume quota")
     quotavolume = cloud.get_volume_quotas(project.id)
-    for key in quotaclasses[quotaclass]["volume"]:
+    for key in quotaclass["volume"]:
         if key in ["per_volume_gigabytes"]:
             tmultiplier = 1
         else:
             tmultiplier = multiplier_storage
 
-        quota_should_be = quotaclasses[quotaclass]["volume"][key] * tmultiplier
+        quota_should_be = quotaclass["volume"][key] * tmultiplier
         if quota_should_be != quotavolume[key]:
             logger.info(
                 f"{project.name} - volume[{key}] = {quota_should_be} != {quotavolume[key]}"
@@ -641,10 +663,6 @@ def process_project(project):
         logger.warning(f"{project.name} - not managed --> skipping")
     elif "quotaclass" not in project:
         logger.warning(f"{project.name} - quotaclass not set --> skipping")
-    elif project.quotaclass not in quotaclasses:
-        logger.warning(
-            f"{project.name} - quotaclass {project.quotaclass} not defined --> skipping"
-        )
     else:
         domain = cloud.get_domain(project.domain_id)
 
@@ -668,9 +686,6 @@ def process_project(project):
 
 
 # load configurations
-
-with open(CONF.classes, "r") as fp:
-    quotaclasses = yaml.load(fp, Loader=yaml.SafeLoader)
 
 with open(CONF.endpoints, "r") as fp:
     ENDPOINTS = yaml.load(fp, Loader=yaml.SafeLoader)
