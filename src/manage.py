@@ -1,4 +1,5 @@
 import math
+import re
 import sys
 
 from deepmerge import always_merger
@@ -14,6 +15,7 @@ CONF = cfg.CONF
 opts = [
     cfg.BoolOpt("dry-run", help="Do not really do anything", default=False),
     cfg.BoolOpt("manage-endpoints", help="Manage endpoints", default=False),
+    cfg.BoolOpt("manage-homeprojects", help="Manage home projects", default=False),
     cfg.StrOpt(
         "classes", help="Path to the classes.yml file", default="etc/classes.yml"
     ),
@@ -26,6 +28,8 @@ opts = [
 ]
 CONF.register_cli_opts(opts)
 CONF(sys.argv[1:], project=PROJECT_NAME)
+
+DEFAULT_ROLES = ["creator", "member", "heat_stack_owner", "load-balancer_member"]
 
 UNMANAGED_PROJECTS = ["admin", "service"]
 
@@ -615,12 +619,44 @@ def create_network_with_router(
             cloud.add_router_interface(router, subnet_id=subnet.id)
 
 
+def check_homeproject_permissions(project, domain):
+    if "homeproject" in project and not check_bool(project["homeproject"]):
+        return
+
+    username = project.name[len(domain) :]
+    user = cloud.identity.find_user(username, domain_id=domain.id)
+
+    # try username without the -XXX postfix
+    if not user:
+        username = re.sub(r"(.*)-[^.]*$", "\\1", project.name[len(domain) :])
+        user = cloud.identity.find_user(username, domain_id=domain.id)
+
+    # looks like there is no matching user for this project, nothing to do
+    if not user:
+        logger.info(
+            f"{project.name} - no matching user found that can be assigned to this project as home project"
+        )
+        return
+
+    logger.info(
+        f"{project.name} - check home project permissions for user = {username}, user_id = {user.id}"
+    )
+    for role_name in DEFAULT_ROLES:
+        try:
+            role = cloud.identity.find_role(role_name)
+            cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
+        except:
+            pass
+
+
 def check_endpoints(project):
 
     if "endpoints" in project:
         endpoints = project.endpoints.split(",")
     else:
         endpoints = ["default", "orchestration"]
+
+    existing_endpoint_groups = {x.name: x for x in KEYSTONE.endpoint_groups.list()}
 
     assigned_endpoint_groups = [
         x.name
@@ -722,7 +758,7 @@ def cache_images(domain):
             )
 
 
-def process_project(project):
+def process_project(project, domain):
 
     logger.info(
         f"{project.name} - project_id = {project.id}, domain_id = {project.domain_id}"
@@ -739,6 +775,10 @@ def process_project(project):
 
         if CONF.manage_endpoints:
             check_endpoints(project)
+
+        if CONF.manage_homeprojects:
+            check_homeproject_permissions(project, domain)
+
         manage_external_network_rbacs(project, domain)
 
         if check_bool(project, "has_shared_images"):
@@ -764,10 +804,6 @@ with open(CONF.endpoints, "r") as fp:
 cloud = openstack.connect(cloud=CONF.cloud)
 KEYSTONE = os_client_config.make_client("identity", cloud=CONF.cloud)
 neutron = os_client_config.make_client("network", cloud=CONF.cloud)
-
-# get data
-
-existing_endpoint_groups = {x.name: x for x in KEYSTONE.endpoint_groups.list()}
 
 # check existence of project and/or domain
 
@@ -795,7 +831,7 @@ if CONF.name and not CONF.domain:
     domain = cloud.get_domain(name_or_id=project.domain_id)
     logger.info(f"{domain.name} - domain_id = {domain.id}")
 
-    process_project(project)
+    process_project(project, domain)
 
 elif CONF.name and CONF.domain:
     domain = cloud.get_domain(name_or_id=CONF.domain)
@@ -827,7 +863,7 @@ elif CONF.name and CONF.domain:
         logger.error(f"project {CONF.name} in domain {CONF.domain} does not exist")
         sys.exit(1)
 
-    process_project(project)
+    process_project(project, domain)
 
 elif not CONF.name and CONF.domain:
     domain = cloud.get_domain(name_or_id=CONF.domain)
@@ -854,7 +890,7 @@ elif not CONF.name and CONF.domain:
                 f"project {project.name} in the default domain is not managed"
             )
         else:
-            process_project(project)
+            process_project(project, domain)
 
     cache_images(domain)
 
@@ -881,6 +917,6 @@ else:
                 # On the service and admin project, the quota is always managed as well.
                 check_quota(project, cloud)
             else:
-                process_project(project)
+                process_project(project, domain)
 
         cache_images(domain)
