@@ -29,6 +29,41 @@ CONF(sys.argv[1:], project=PROJECT_NAME)
 
 UNMANAGED_PROJECTS = ["admin", "service"]
 
+# all known quotas
+QUOTAS = {
+    "compute": [
+        "cores",
+        "injected_file_content_bytes",
+        "injected_file_path_bytes",
+        "injected_files",
+        "instances",
+        "key_pairs",
+        "metadata_items",
+        "ram",
+        "server_group_members",
+        "server_groups",
+    ],
+    "network": [
+        "floatingip",
+        "network",
+        "port",
+        "rbac_policy",
+        "router",
+        "security_group",
+        "security_group_rule",
+        "subnet",
+        "subnetpool",
+    ],
+    "volume": [
+        "backup_gigabytes",
+        "backups",
+        "gigabytes",
+        "per_volume_gigabytes",
+        "snapshots",
+        "volumes",
+    ],
+}
+
 logger_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>"
 logger.remove()
 logger.add(sys.stdout, format=logger_format)
@@ -112,18 +147,33 @@ def check_quota(project, cloud):
         ):
             quota_router = quota_router + 1
 
+    overwrites = {}
+
+    # overwrite quotas
+    for p in [x for x in project if x.startswith("quota_") and x != "quota_router"]:
+        logger.info(f"{project.name} - overwriting {p[6:]} = {project.get(p)}")
+        overwrites[p[6:]] = True
+        if p[6:] in QUOTAS["network"]:
+            quotaclass["network"][p[6:]] = int(project.get(p))
+        elif p[6:] in QUOTAS["compute"]:
+            quotaclass["compute"][p[6:]] = int(project.get(p))
+        elif p[6:] in QUOTAS["volume"]:
+            quotaclass["storage"][p[6:]] = int(project.get(p))
+
     logger.info(f"{project.name} - check network quota")
     quotanetwork = cloud.get_network_quotas(project.id)
     for key in quotaclass["network"]:
 
         if key == "router":
             quota_should_be = quota_router
+        elif key in overwrites:
+            quota_should_be = quotaclass["network"][key]
         else:
             quota_should_be = quotaclass["network"][key] * multiplier_network
 
         if quota_should_be != quotanetwork[key]:
             logger.info(
-                f"{project.name} - network[{key} = {quota_should_be} != {quotanetwork[key]}"
+                f"{project.name} - network[{key}] = {quota_should_be} != {quotanetwork[key]}"
             )
             if not CONF.dry_run:
                 cloud.set_network_quotas(project.id, **{key: quota_should_be})
@@ -140,7 +190,11 @@ def check_quota(project, cloud):
         else:
             tmultiplier = multiplier_compute
 
-        quota_should_be = quotaclass["compute"][key] * tmultiplier
+        if key in overwrites:
+            quota_should_be = quotaclass["compute"][key]
+        else:
+            quota_should_be = quotaclass["compute"][key] * tmultiplier
+
         if quota_should_be != quotacompute[key]:
             logger.info(
                 f"{project.name} - compute[{key}] = {quota_should_be} != {quotacompute[key]}"
@@ -156,7 +210,11 @@ def check_quota(project, cloud):
         else:
             tmultiplier = multiplier_storage
 
-        quota_should_be = quotaclass["volume"][key] * tmultiplier
+        if key in overwrites:
+            quota_should_be = quotaclass["volume"][key]
+        else:
+            quota_should_be = quotaclass["volume"][key] * tmultiplier
+
         if quota_should_be != quotavolume[key]:
             logger.info(
                 f"{project.name} - volume[{key}] = {quota_should_be} != {quotavolume[key]}"
