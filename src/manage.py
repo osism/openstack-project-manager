@@ -616,41 +616,52 @@ def cache_images(domain):
     # get the images project
     project_images = cloud.get_project(name_or_id=f"{domain.name}-images")
 
-    if project_images:
-        # only images owned by the images project should be cached
-        images = cloud.image.images(owner=project_images.id, visibility="shared")
+    if not project_images:
+        logger.info(
+            f"{domain.name} - image cache project {domain.name}-images not found, image cache feature not required"
+        )
+        return
 
+    # only images owned by the images project should be cached
+    images = cloud.image.images(owner=project_images.id, visibility="shared")
+
+    try:
         cloud_domain_admin = openstack.connect(
             cloud=f"opm-{domain.name}-admin", project_name=project_images.name
         )
+    except openstack.exceptions.ConfigException:
+        logger.warning(
+            f"{domain.name} - opm-{domain.name}-admin cloud profile not found, image cache feature not usable"
+        )
+        return
 
-        # remove cache volume for which there is no image anymore
-        volumes = cloud_domain_admin.volume.volumes(owner=project_images.id)
-        for volume in volumes:
-            image = cloud_domain_admin.image.find_image(name_or_id=volume.name[6:])
-            if not image:
-                logger.info(
-                    f"{domain.name} - remove cache volume {volume.name} for which there is no image anymore"
-                )
-                cloud_domain_admin.volume.delete_volume(volume)
+    # remove cache volume for which there is no image anymore
+    volumes = cloud_domain_admin.volume.volumes(owner=project_images.id)
+    for volume in volumes:
+        image = cloud_domain_admin.image.find_image(name_or_id=volume.name[6:])
+        if not image:
+            logger.info(
+                f"{domain.name} - remove cache volume {volume.name} for which there is no image anymore"
+            )
+            cloud_domain_admin.volume.delete_volume(volume)
 
-        for image in images:
-            volume_name = f"cache-{image.id}"
-            volume = cloud_domain_admin.volume.find_volume(name_or_id=volume_name)
+    for image in images:
+        volume_name = f"cache-{image.id}"
+        volume = cloud_domain_admin.volume.find_volume(name_or_id=volume_name)
 
-            if not volume:
-                logger.info(
-                    f"{domain.name} - prepare image cache for '{image.name}' ({image.id})"
-                )
+        if not volume:
+            logger.info(
+                f"{domain.name} - prepare image cache for '{image.name}' ({image.id})"
+            )
 
-                # convert bytes to gigabytes and always round up
-                volume_size = math.ceil(image.size / (1024 * 1024 * 1024))
-                if volume_size < image.min_disk:
-                    volume_size = image.min_disk
+            # convert bytes to gigabytes and always round up
+            volume_size = math.ceil(image.size / (1024 * 1024 * 1024))
+            if volume_size < image.min_disk:
+                volume_size = image.min_disk
 
-                cloud_domain_admin.volume.create_volume(
-                    name=volume_name, size=volume_size, imageRef=image.id
-                )
+            cloud_domain_admin.volume.create_volume(
+                name=volume_name, size=volume_size, imageRef=image.id
+            )
 
 
 def process_project(project):
