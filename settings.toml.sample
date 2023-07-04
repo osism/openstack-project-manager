@@ -1,0 +1,19 @@
+# [domainname]
+# ldap_server = ""
+# ldap_username = ""
+# ldap_password = ""
+# ldap_base_dn = ""
+# ldap_group_cn = ""
+# ldap_object_class = ""
+# ldap_search_attribute = ""
+#
+# quotaclass =
+# quotamultiplier =
+# quotamultiplier_compute =
+# quotamultiplier_network =
+# quotamultiplier_storage =
+# quota_router =
+#
+# has_public_network =
+# has_service_network =
+# has_shared_images =
