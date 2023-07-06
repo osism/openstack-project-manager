@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "058e1529d1853e3f5678e4cefb09cabb119d7e4d48a3279cdf0239d67bad4797"
+            "sha256": "64cedd5dc98a7723c1f55b116ba51503eee0a6e579f9791732e7be5414af99ec"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -525,11 +525,11 @@
         },
         "oslo.utils": {
             "hashes": [
-                "sha256:76bc0108d50aca972b68fec8298e791b5fbcbeb9a51a27c6986b41b0a6a62eeb",
-                "sha256:b34648b1eb311dc3461e84a3bb75ed677fb0a49024def708057881e51759d5d6"
+                "sha256:30ba9fd431be468cd17b5d7c1a0ae6d63bb63aaaf97bf590123f13c6d95254a3",
+                "sha256:fe1d166f4cb004fbd6b6bc9adfbc32aedeaf3eb54eeaf70d91a224a87543c6a5"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==6.1.0"
+            "version": "==6.2.0"
         },
         "packaging": {
             "hashes": [
@@ -578,6 +578,13 @@
             ],
             "version": "==2.21"
         },
+        "pyinotify": {
+            "hashes": [
+                "sha256:9c998a5d7606ca835065cdabc013ae6c66eb9ea76a00a1e3bc6e0cfe2b4f71f4"
+            ],
+            "markers": "sys_platform != 'win32' and sys_platform != 'darwin' and sys_platform != 'sunos5'",
+            "version": "==0.9.6"
+        },
         "pyparsing": {
             "hashes": [
                 "sha256:d554a96d1a7d3ddaf7183104485bc19fd80543ad6ac5bdb6426719d766fb06c1",
@@ -617,11 +624,11 @@
         },
         "python-neutronclient": {
             "hashes": [
-                "sha256:2926d3dc5af2fc55a1726aa9bb031ec022e475a4b9717cb1f005c67ca4e249f2",
-                "sha256:badb503d8abb4d72bd708608e62554e4af964c8170fcbd59209313e064f59bef"
+                "sha256:2aae8e928361617f9af7f661c8f2c646ca0008b2051d86d10617d54ce54a6313",
+                "sha256:6dacdf88f3725447a2fb29fc0d76996fcf4f3977f098ca3df4b1f39eb8dbba32"
             ],
             "index": "pypi",
-            "version": "==10.0.0"
+            "version": "==11.0.0"
         },
         "pytz": {
             "hashes": [
@@ -813,6 +820,14 @@
             ],
             "index": "pypi",
             "version": "==0.9.0"
+        },
+        "tzdata": {
+            "hashes": [
+                "sha256:11ef1e08e54acb0d4f95bdb1be05da659673de4acbd21bf9c69e94cc5e907a3a",
+                "sha256:7e65763eef3120314099b6939b5546db7adce1e7d6f2e179e3df563c70511eda"
+            ],
+            "markers": "python_version >= '2'",
+            "version": "==2023.3"
         },
         "urllib3": {
             "hashes": [
