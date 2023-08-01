@@ -162,7 +162,7 @@ def check_quota(project, cloud):
         elif p[6:] in QUOTAS["compute"]:
             quotaclass["compute"][p[6:]] = int(project.get(p))
         elif p[6:] in QUOTAS["volume"]:
-            quotaclass["storage"][p[6:]] = int(project.get(p))
+            quotaclass["volume"][p[6:]] = int(project.get(p))
 
     logger.info(f"{project.name} - check network quota")
     quotanetwork = cloud.get_network_quotas(project.id)
