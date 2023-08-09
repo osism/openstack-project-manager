@@ -1,0 +1,12 @@
+---
+- name: Pre mypy play
+  hosts: all
+
+  tasks:
+    - name: Ensure required APT packages are installed
+      ansible.builtin.apt:
+        name:
+          - libldap2-dev
+          - libsasl2-dev
+        update_cache: yes
+      become: yes  # run as root
