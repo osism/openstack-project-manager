@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "26acb779f3e90140467b7e63d28f5cb0b9b8cb40ebce34444d53d8597c54bbab"
+            "sha256": "ecdcd78f5b8e70d5f12da29b53a769a8a749ed61d3c2926e5c410728b62fd733"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -276,11 +276,12 @@
         },
         "dynaconf": {
             "hashes": [
-                "sha256:00dbd7541ca0f99bcb207cfc8aee0ac8f7d6b32bbb372e5b2865f0cb829b06c3",
-                "sha256:a4af12524f1fc527c6c0cdd4bb38cf83992d5155ad516baa98d9d01b7a731d09"
+                "sha256:0d62e51af6e9971e8e45cabee487ec70467d6c5065a9f070beac973bedaf1d54",
+                "sha256:2f98ec85a2b8edb767b3ed0f82c6d605d30af116ce4622932a719ba70ff152fc"
             ],
             "index": "pypi",
-            "version": "==3.2.1"
+            "markers": "python_version >= '3.8'",
+            "version": "==3.2.2"
         },
         "idna": {
             "hashes": [
@@ -344,6 +345,7 @@
                 "sha256:b93aa30099fa6860d4727f1b81f8718e965bb96253fa190fab2077aaad6d15d3"
             ],
             "index": "pypi",
+            "markers": "python_version >= '3.5'",
             "version": "==0.7.0"
         },
         "msgpack": {
@@ -462,6 +464,7 @@
                 "sha256:844982ec09d4930cc389edb2dfad5aa55b07b41f3f2978cb4e43c5f40a469fa5"
             ],
             "index": "pypi",
+            "markers": "python_version >= '3.6'",
             "version": "==1.4.0"
         },
         "os-client-config": {
@@ -481,11 +484,11 @@
         },
         "osc-lib": {
             "hashes": [
-                "sha256:67e0d413911e8d49cb9601e80eb28dc4b391b3d7dbd70adc9a69a204516d9452",
-                "sha256:e590538b003237feaea30758789e14066ba155a58d53c07d70e85108ab781e40"
+                "sha256:4f10b4c0495ffbe521658f68bc3cb3df39f1e197bae31bef39060c0b82b38efa",
+                "sha256:6f556012ee0401bf1bf5c442eae020d2ccc866992a2441033d8861b04749fdcc"
             ],
             "markers": "python_version >= '3.6'",
-            "version": "==2.8.0"
+            "version": "==2.8.1"
         },
         "oslo.config": {
             "hashes": [
@@ -624,6 +627,7 @@
                 "sha256:ab26c519a0ef2a443a2a10391fa3c5cb52d7871323399db949ebfaa9f25ee2a0"
             ],
             "index": "pypi",
+            "markers": "python_version >= '3.6'",
             "version": "==3.4.3"
         },
         "python-neutronclient": {
@@ -632,6 +636,7 @@
                 "sha256:6dacdf88f3725447a2fb29fc0d76996fcf4f3977f098ca3df4b1f39eb8dbba32"
             ],
             "index": "pypi",
+            "markers": "python_version >= '3.8'",
             "version": "==11.0.0"
         },
         "pytz": {
@@ -684,7 +689,7 @@
                 "sha256:fd1592b3fdf65fff2ad0004b5e363300ef59ced41c2e6b3a99d4089fa8c5435d",
                 "sha256:fd66fc5d0da6d9815ba2cebeb4205f95818ff4b79c3ebe268e75d961704af52f"
             ],
-            "index": "pypi",
+            "markers": "python_version >= '3.6'",
             "version": "==6.0.1"
         },
         "requests": {
@@ -823,6 +828,7 @@
                 "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f"
             ],
             "index": "pypi",
+            "markers": "python_version >= '3.7'",
             "version": "==0.9.0"
         },
         "typing-extensions": {
