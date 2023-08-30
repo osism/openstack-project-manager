@@ -145,9 +145,9 @@ testbed:
     subnet: 2
     subnetpool: 1
   volume:
-    backup_gigabytes: 40
-    backups: 8
-    gigabytes: 300
+    backup_gigabytes: 0
+    backups: 0
+    gigabytes: 500
     per_volume_gigabytes: 200
-    snapshots: 4
-    volumes: 15
+    snapshots: 0
+    volumes: 20
