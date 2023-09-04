@@ -1,16 +1,24 @@
 ---
+- job:
+    name: openstack-project-manager-mypy
+    parent: mypy
+    pre-run: playbooks/pre.yml
+
 - project:
     merge-mode: squash-merge
     default-branch: main
     check:
       jobs:
         - flake8
+        - openstack-project-manager-mypy
         - yamllint
     gate:
       jobs:
         - flake8
+        - openstack-project-manager-mypy
         - yamllint
     periodic-daily:
       jobs:
         - flake8
+        - openstack-project-manager-mypy
         - yamllint

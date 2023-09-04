@@ -35,7 +35,7 @@ CONF.register_cli_opts(opts)
 CONF(sys.argv[1:], project=PROJECT_NAME)
 
 
-def generate_password(password_length: int) -> int:
+def generate_password(password_length: int) -> str:
     return "".join(
         random.choice(string.ascii_letters + string.digits)
         for x in range(password_length)
