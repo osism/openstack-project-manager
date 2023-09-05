@@ -125,17 +125,17 @@ okeanos:
 testbed:
   parent: default
   compute:
-    cores: 28
+    cores: 64
     injected_file_content_bytes: 0
     injected_file_path_bytes: 0
     injected_files: 0
-    instances: 4
+    instances: 10
     key_pairs: 5
-    ram: 106496
+    ram: 262144
     server_group_members: 4
     server_groups: 2
   network:
-    floatingip: 1
+    floatingip: 10
     network: 2
     port: 20
     rbac_policy: 10
@@ -147,7 +147,7 @@ testbed:
   volume:
     backup_gigabytes: 0
     backups: 0
-    gigabytes: 500
+    gigabytes: 1000
     per_volume_gigabytes: 200
     snapshots: 0
-    volumes: 20
+    volumes: 50
