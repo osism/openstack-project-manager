@@ -14,6 +14,7 @@ from oslo_config import cfg
 PROJECT_NAME = "openstack-project-manager"
 CONF = cfg.CONF
 opts = [
+    cfg.BoolOpt("debug", help="Debug mode", default=False),
     cfg.StrOpt("cloud", help="Cloud name in clouds.yml", default="admin"),
     cfg.StrOpt("domain", help="Domain to be managed", default="default"),
     cfg.StrOpt("ldap-server", help="LDAP server URL"),
@@ -29,6 +30,22 @@ CONF(sys.argv[1:], project=PROJECT_NAME)
 
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["creator", "member", "heat_stack_owner", "load-balancer_member"]
+
+if CONF.debug:
+    level = "DEBUG"
+    log_fmt = (
+        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
+        "<level>{message}</level>"
+    )
+else:
+    level = "INFO"
+    log_fmt = (
+        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
+        "<level>{message}</level>"
+    )
+
+logger.remove()
+logger.add(sys.stderr, format=log_fmt, level=level, colorize=True)
 
 # read configuration
 
@@ -119,6 +136,8 @@ for a, b in result:
     if a == f"{ldap_group_cn},{ldap_base_dn}":
         for x in b[ldap_search_attribute]:
             username = x.decode("utf-8")
+
+            logger.debug(f"Checking user {username}")
             user = cloud.identity.find_user(username, domain_id=domain.id)
 
             if user:
