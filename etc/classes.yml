@@ -140,8 +140,8 @@ testbed:
     port: 20
     rbac_policy: 10
     router: 2
-    security_group: 5
-    security_group_rule: 20
+    security_group: 10
+    security_group_rule: 50
     subnet: 2
     subnetpool: 1
   volume:
