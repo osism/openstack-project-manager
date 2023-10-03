@@ -641,7 +641,7 @@ def check_homeproject_permissions(project, domain):
         return
 
     logger.info(
-        f"{project.name} - check home project permissions for user = {username}, user_id = {user.id}"
+        f"{project.name} - ensure home project permissions for user = {username}, user_id = {user.id}"
     )
     for role_name in DEFAULT_ROLES:
         try:
