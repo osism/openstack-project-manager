@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    With the script manage-ldap it is possible to add all users in a certain
+    LDAP group to all projects of a certain domain.
