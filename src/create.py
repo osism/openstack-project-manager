@@ -13,6 +13,14 @@ from tabulate import tabulate
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["creator", "member", "heat_stack_owner", "load-balancer_member"]
 
+# Default roles to be assigned to a admin user for a project
+DEFAULT_ADMIN_ROLES = [
+    "creator",
+    "member",
+    "heat_stack_owner",
+    "load-balancer_member",
+]
+
 PROJECT_NAME = "openstack-project-manager"
 CONF = cfg.CONF
 
@@ -96,9 +104,11 @@ else:
 
 # Establish dedicated connection to Keystone service
 # FIXME(berendt): use get_domain
+domain_created = False
 domain = conn.identity.find_domain(CONF.domain)
 if not domain:
     domain = conn.create_domain(name=CONF.domain)
+    domain_created = True
 
 # Find or create the project
 # FIXME(berendt): use get_project
@@ -213,8 +223,17 @@ if CONF.assign_admin_user:
             name=admin_name, password=admin_password, domain_id=admin_domain_id
         )
 
+        if domain_created:
+            try:
+                role = conn.identity.find_role("domain-manager")
+                conn.identity.assign_domain_role_to_user(
+                    domain.id, admin_user.id, role.id
+                )
+            except:
+                pass
+
     if admin_user:
-        for role_name in DEFAULT_ROLES:
+        for role_name in DEFAULT_ADMIN_ROLES:
             try:
                 role = conn.identity.find_role(role_name)
                 conn.identity.assign_project_role_to_user(

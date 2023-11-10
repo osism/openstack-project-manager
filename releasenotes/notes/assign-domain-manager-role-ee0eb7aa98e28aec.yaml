@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    When a new domain is created, the domain manager role is now
+    assigned to the associated admin user.
