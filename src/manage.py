@@ -100,7 +100,6 @@ def check_bool(project, param):
 
 
 def check_quota(project, cloud):
-
     if project.name == "service":
         quotaclass = get_quotaclass("service")
     elif project.name == "admin":
@@ -169,7 +168,6 @@ def check_quota(project, cloud):
     logger.info(f"{project.name} - check network quota")
     quotanetwork = cloud.get_network_quotas(project.id)
     for key in quotaclass["network"]:
-
         if key == "router":
             quota_should_be = quota_router
         elif key in overwrites:
@@ -253,7 +251,6 @@ def manage_external_network_rbacs(project, domain):
     domain_name = domain.name.lower()
 
     if domain_name != "default" and check_bool(project, "has_service_network"):
-
         if "service_network" in project:
             public_net_name = project.service_network
         else:
@@ -273,7 +270,6 @@ def manage_external_network_rbacs(project, domain):
 
 
 def create_network_resources(project, domain):
-
     if "quotamultiplier" in project:
         multiplier = int(project.quotamultiplier)
     else:
@@ -352,7 +348,6 @@ def create_network_resources(project, domain):
 
 
 def add_service_network(project, net_name):
-
     if "service_network_type" in project:
         service_network_type = f"access_as_{project.service_network_type}"
     else:
@@ -398,7 +393,6 @@ def add_service_network(project, net_name):
 
 
 def del_service_network(project, public_net_name):
-
     try:
         logger.info(
             f"{project.name} - check if service rbac policy must be deleted ({public_net_name})"
@@ -434,7 +428,6 @@ def del_service_network(project, public_net_name):
 
 
 def add_external_network(project, public_net_name):
-
     try:
         logger.info(
             f"{project.name} - check if external rbac policy must be created ({public_net_name})"
@@ -476,7 +469,6 @@ def add_external_network(project, public_net_name):
 
 
 def del_external_network(project, public_net_name):
-
     try:
         logger.info(
             f"{project.name} - check if external rbac policy must be deleted ({public_net_name})"
@@ -514,7 +506,6 @@ def del_external_network(project, public_net_name):
 def create_service_network(
     project, net_name, subnet_name, availability_zone, subnet_cidr=None
 ):
-
     domain = cloud.get_domain(name_or_id=project.domain_id)
     project_service = cloud.get_project(name_or_id=f"{domain.name}-service")
 
@@ -557,7 +548,6 @@ def create_service_network(
 
 
 def create_network(project, net_name, subnet_name, availability_zone):
-
     attach = False
     net = cloud.get_network(net_name, filters={"project_id": project.id})
 
@@ -591,7 +581,6 @@ def create_network(project, net_name, subnet_name, availability_zone):
 def create_network_with_router(
     project, net_name, subnet_name, router_name, public_net_name, availability_zone
 ):
-
     attach_router = False
     router = cloud.get_router(router_name, filters={"project_id": project.id})
 
@@ -652,7 +641,6 @@ def check_homeproject_permissions(project, domain):
 
 
 def check_endpoints(project):
-
     if "endpoints" in project:
         endpoints = project.endpoints.split(",")
     else:
@@ -761,7 +749,6 @@ def cache_images(domain):
 
 
 def process_project(project, domain):
-
     logger.info(
         f"{project.name} - project_id = {project.id}, domain_id = {project.domain_id}"
     )
