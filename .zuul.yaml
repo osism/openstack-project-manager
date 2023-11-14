@@ -12,13 +12,16 @@
         - flake8
         - openstack-project-manager-mypy
         - yamllint
+        - python-black
     gate:
       jobs:
         - flake8
         - openstack-project-manager-mypy
         - yamllint
+        - python-black
     periodic-daily:
       jobs:
         - flake8
         - openstack-project-manager-mypy
         - yamllint
+        - python-black
