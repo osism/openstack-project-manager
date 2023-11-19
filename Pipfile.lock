@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "39b25c0d36b0858a4cf5eee29c66ddd1aa5c1866629ba1b627064cf6c16a4e34"
+            "sha256": "ff903bc55bfa90eab5495dc757cfdf7a610926980bf90348d9a9ee5fad41a49c"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -623,11 +623,11 @@
         },
         "python-ldap": {
             "hashes": [
-                "sha256:ab26c519a0ef2a443a2a10391fa3c5cb52d7871323399db949ebfaa9f25ee2a0"
+                "sha256:7edb0accec4e037797705f3a05cbf36a9fde50d08c8f67f2aef99a2628fab828"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.6'",
-            "version": "==3.4.3"
+            "version": "==3.4.4"
         },
         "python-neutronclient": {
             "hashes": [
