@@ -863,6 +863,7 @@ elif not CONF.name and CONF.domain:
     logger.info(f"{domain.name} - domain_id = {domain.id}")
 
     for project in cloud.list_projects(domain_id=domain.id):
+        logger.info(f"{project.name} - project_id = {project.id}")
         if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
             # the service project must always be able to access the public network.
             if project.name == "service":
@@ -891,6 +892,7 @@ else:
         logger.info(f"{domain.name} - domain_id = {domain.id}")
 
         for project in cloud.list_projects(domain_id=domain.id):
+            logger.info(f"{project.name} - project_id = {project.id}")
             if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
                 # the service project must always be able to access the public network.
                 if project.name == "service":
