@@ -36,6 +36,36 @@ default:
     snapshots: 0
     volumes: 0
 
+unlimited:
+  compute:
+    cores: -1
+    injected_file_content_bytes: 10240
+    injected_file_path_bytes: 255
+    injected_files: 5
+    instances: -1
+    key_pairs: -1
+    metadata_items: 128
+    ram: -1
+    server_group_members: -1
+    server_groups: -1
+  network:
+    floatingip: -1
+    network: -1
+    port: -1
+    rbac_policy: -1
+    router: -1
+    security_group: -1
+    security_group_rule: -1
+    subnet: -1
+    subnetpool: -1
+  volume:
+    backup_gigabytes: -1
+    backups: -1
+    gigabytes: -1
+    per_volume_gigabytes: -1
+    snapshots: -1
+    volumes: -1
+
 # Special project for the share images function. Volumes can be
 # used to fill the image cache.
 images:
