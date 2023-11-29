@@ -4,6 +4,7 @@ import random
 import string
 import sys
 
+from loguru import logger
 from oslo_config import cfg
 import os_client_config
 import openstack
@@ -60,6 +61,7 @@ opts = [
         "quota-multiplier-storage", help="Quota multiplier storage", default=None
     ),
     cfg.IntOpt("quota-router", help="Quota router", default=1),
+    cfg.StrOpt("admin-domain", help="Admin domain", default="default"),
     cfg.StrOpt("cloud", help="Managed cloud", default="admin"),
     cfg.StrOpt("domain", help="Domain", default="default"),
     cfg.StrOpt("internal-id", help="Internal ID", default=None),
@@ -73,6 +75,10 @@ opts = [
 CONF.register_cli_opts(opts)
 
 CONF(sys.argv[1:], project=PROJECT_NAME)
+
+logger_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+logger.remove()
+logger.add(sys.stdout, format=logger_format)
 
 
 def generate_password(password_length: int) -> str:
@@ -213,36 +219,38 @@ if not CONF.create_domain:
 admin_password = None
 admin_name = f"{CONF.domain}-admin"
 
-# Admin users for a domain are always created in the default domain
-admin_domain_id = "default"
-
 if CONF.assign_admin_user:
-    admin_user = conn.identity.find_user(admin_name, domain_id=admin_domain_id)
+    admin_domain = conn.identity.find_domain(CONF.admin_domain)
+    if not admin_domain:
+        logger.error(f"Admin domain {CONF.admin_domain} not found")
+    else:
+        admin_domain_id = admin_domain.id
+        admin_user = conn.identity.find_user(admin_name, domain_id=admin_domain_id)
 
-    if not admin_user and CONF.create_admin_user:
-        admin_password = generate_password(CONF.password_length)
-        admin_user = conn.create_user(
-            name=admin_name, password=admin_password, domain_id=admin_domain_id
-        )
+        if not admin_user and CONF.create_admin_user:
+            admin_password = generate_password(CONF.password_length)
+            admin_user = conn.create_user(
+                name=admin_name, password=admin_password, domain_id=admin_domain_id
+            )
 
-        if domain_created:
-            try:
-                role = conn.identity.find_role("domain-manager")
-                conn.identity.assign_domain_role_to_user(
-                    domain.id, admin_user.id, role.id
-                )
-            except:
-                pass
+            if domain_created:
+                try:
+                    role = conn.identity.find_role("domain-manager")
+                    conn.identity.assign_domain_role_to_user(
+                        domain.id, admin_user.id, role.id
+                    )
+                except:
+                    pass
 
-    if admin_user and not CONF.create_domain:
-        for role_name in DEFAULT_ADMIN_ROLES:
-            try:
-                role = conn.identity.find_role(role_name)
-                conn.identity.assign_project_role_to_user(
-                    project.id, admin_user.id, role.id
-                )
-            except:
-                pass
+        if admin_user and not CONF.create_domain:
+            for role_name in DEFAULT_ADMIN_ROLES:
+                try:
+                    role = conn.identity.find_role(role_name)
+                    conn.identity.assign_project_role_to_user(
+                        project.id, admin_user.id, role.id
+                    )
+                except:
+                    pass
 
 result = [
     ["domain", CONF.domain, domain.id],
