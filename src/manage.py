@@ -271,6 +271,39 @@ def manage_external_network_rbacs(project, domain):
         del_service_network(project, public_net_name)
 
 
+def check_volume_types(project, domain):
+    if "quotaclass" in project:
+        quotaclass = project.quotaclass
+    else:
+        logger.warning(f"{project.name} - quotaclass not set --> use default")
+        if domain.name.startswith("ok"):
+            quotaclass = get_quotaclass("okeanos")
+        else:
+            quotaclass = get_quotaclass("basic")
+
+    if "volume_types" in quotaclass:
+        for item in quotaclass["volume_types"]:
+            logger.info(f"{project.name} - add volume type {item}")
+            volume_types = [
+                x
+                for x in cloud.block_storage.types(
+                    **{"name": item, "is_public": "False"}
+                )
+            ]
+
+            if len(volume_types) > 1:
+                logger.error(
+                    f"{project.name} - volume type {item} not unique, please use volume type ID"
+                )
+            elif len(volume_types) == 0:
+                logger.error(f"{project.name} - volume type {item} not found")
+            else:
+                try:
+                    cloud.block_storage.add_type_access(volume_types[0], project.id)
+                except openstack.exceptions.ConflictException:
+                    pass
+
+
 def create_network_resources(project, domain):
     if "quotamultiplier" in project:
         multiplier = int(project.quotamultiplier)
@@ -647,7 +680,7 @@ def assign_admin_user(project, domain):
     admin_name = f"{domain.name}-admin"
 
     if not admin_domain:
-        logger.error(f"Admin domain {CONF.admin_domain} not found")
+        logger.error(f"{project.name} - admin domain {CONF.admin_domain} not found")
     else:
         admin_domain_id = admin_domain.id
         admin_user = cloud.identity.find_user(admin_name, domain_id=admin_domain_id)
@@ -812,6 +845,8 @@ def process_project(project, domain):
             and check_bool(project, "has_service_network")
         ):
             create_network_resources(project, domain)
+
+        check_volume_types(project, domain)
 
 
 # load configurations
