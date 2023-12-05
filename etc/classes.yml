@@ -129,15 +129,15 @@ okeanos:
   parent: default
   compute:
     cores: 50
-    instances: 50
-    key_pairs: 5
+    instances: 10
+    key_pairs: 10
     ram: 131072
     server_group_members: 100
     server_groups: 100
   network:
     floatingip: 10
     network: 10
-    port: 100
+    port: 50
     rbac_policy: 10
     router: 10
     security_group: 100
@@ -147,7 +147,7 @@ okeanos:
   volume:
     backup_gigabytes: 100
     backups: 10
-    gigabytes: 100
+    gigabytes: 200
     per_volume_gigabytes: 200
     snapshots: 100
     volumes: 100
