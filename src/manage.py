@@ -15,9 +15,11 @@ import yaml
 PROJECT_NAME = "openstack-project-manager"
 CONF = cfg.CONF
 opts = [
+    cfg.BoolOpt("assign-admin-user", help="Assign admin user", default=False),
     cfg.BoolOpt("dry-run", help="Do not really do anything", default=False),
     cfg.BoolOpt("manage-endpoints", help="Manage endpoints", default=False),
     cfg.BoolOpt("manage-homeprojects", help="Manage home projects", default=False),
+    cfg.StrOpt("admin-domain", help="Admin domain", default="default"),
     cfg.StrOpt(
         "classes", help="Path to the classes.yml file", default="etc/classes.yml"
     ),
@@ -640,6 +642,25 @@ def check_homeproject_permissions(project, domain):
             pass
 
 
+def assign_admin_user(project, domain):
+    admin_domain = cloud.identity.find_domain(CONF.admin_domain)
+    admin_name = f"{domain.name}-admin"
+
+    if not admin_domain:
+        logger.error(f"Admin domain {CONF.admin_domain} not found")
+    else:
+        admin_domain_id = admin_domain.id
+        admin_user = cloud.identity.find_user(admin_name, domain_id=admin_domain_id)
+        try:
+            role = cloud.identity.find_role("member")
+            cloud.identity.assign_project_role_to_user(
+                project.id, admin_user.id, role.id
+            )
+            logger.info(f"{project.name} - assign admin user {admin_name}")
+        except:
+            pass
+
+
 def check_endpoints(project):
     if "endpoints" in project:
         endpoints = project.endpoints.split(",")
@@ -774,6 +795,9 @@ def process_project(project, domain):
 
         if CONF.manage_homeprojects:
             check_homeproject_permissions(project, domain)
+
+        if CONF.assign_admin_user:
+            assign_admin_user(project, domain)
 
         manage_external_network_rbacs(project, domain)
 
