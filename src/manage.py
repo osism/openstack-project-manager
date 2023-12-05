@@ -107,7 +107,11 @@ def check_quota(project, cloud):
     elif "quotaclass" in project:
         quotaclass = get_quotaclass(project.quotaclass)
     else:
-        quotaclass = get_quotaclass("basic")
+        domain = cloud.get_domain(name_or_id=project.domain_id)
+        if domain.name.startswith("ok"):
+            quotaclass = get_quotaclass("okeanos")
+        else:
+            quotaclass = get_quotaclass("basic")
 
     logger.info(f"{project.name} - quotaclass {quotaclass}")
 
@@ -752,13 +756,16 @@ def process_project(project, domain):
     if "unmanaged" in project:
         logger.warning(f"{project.name} - not managed --> skipping")
     else:
+        domain = cloud.get_domain(project.domain_id)
+
         if "quotaclass" in project:
             quotaclass = project.quotaclass
         else:
             logger.warning(f"{project.name} - quotaclass not set --> use default")
-            quotaclass = "basic"
-
-        domain = cloud.get_domain(project.domain_id)
+            if domain.name.startswith("ok"):
+                quotaclass = get_quotaclass("okeanos")
+            else:
+                quotaclass = get_quotaclass("basic")
 
         check_quota(project, cloud)
 
