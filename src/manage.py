@@ -109,13 +109,7 @@ def check_quota(project, cloud):
     else:
         quotaclass = get_quotaclass("basic")
 
-    if quotaclass:
-        logger.info(f"{project.name} - quotaclass {project.quotaclass}")
-    else:
-        logger.warning(
-            f"{project.name} - quotaclass {project.quotaclass} not defined --> skipping"
-        )
-        return
+    logger.info(f"{project.name} - quotaclass {quotaclass}")
 
     if "quotamultiplier" in project:
         multiplier = int(project.quotamultiplier)
