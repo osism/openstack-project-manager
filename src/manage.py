@@ -104,8 +104,10 @@ def check_quota(project, cloud):
         quotaclass = get_quotaclass("service")
     elif project.name == "admin":
         quotaclass = get_quotaclass("admin")
-    else:
+    elif "quotaclass" in project:
         quotaclass = get_quotaclass(project.quotaclass)
+    else:
+        quotaclass = get_quotaclass("basic")
 
     if quotaclass:
         logger.info(f"{project.name} - quotaclass {project.quotaclass}")
@@ -755,9 +757,13 @@ def process_project(project, domain):
 
     if "unmanaged" in project:
         logger.warning(f"{project.name} - not managed --> skipping")
-    elif "quotaclass" not in project:
-        logger.warning(f"{project.name} - quotaclass not set --> skipping")
     else:
+        if "quotaclass" in project:
+            quotaclass = project.quotaclass
+        else:
+            logger.warning(f"{project.name} - quotaclass not set --> use default")
+            quotaclass = "basic"
+
         domain = cloud.get_domain(project.domain_id)
 
         check_quota(project, cloud)
@@ -774,7 +780,7 @@ def process_project(project, domain):
             share_images(project, domain)
 
         if (
-            project.quotaclass not in ["default", "service"]
+            quotaclass not in ["default", "service"]
             and "managed_network_resources" in project
         ) or (
             check_bool(project, "is_service_project")

@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Use a default for `quotaclass` if none has been set.
