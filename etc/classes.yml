@@ -151,6 +151,9 @@ okeanos:
     per_volume_gigabytes: 200
     snapshots: 100
     volumes: 100
+  volume_types:
+    - hdd
+    - ssd
 
 testbed:
   parent: default
