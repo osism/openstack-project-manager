@@ -154,6 +154,7 @@ okeanos:
   volume_types:
     - hdd
     - ssd
+  public_network: public
 
 testbed:
   parent: default

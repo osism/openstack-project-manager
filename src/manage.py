@@ -230,8 +230,19 @@ def check_quota(project, cloud):
 
 
 def manage_external_network_rbacs(project, domain):
-    if check_bool(project, "has_public_network") or check_bool(
-        project, "show_public_network"
+    if "quotaclass" in project:
+        quotaclass = get_quotaclass(project.quotaclass)
+    else:
+        logger.warning(f"{project.name} - quotaclass not set --> use default")
+        if domain.name.startswith("ok"):
+            quotaclass = get_quotaclass("okeanos")
+        else:
+            quotaclass = get_quotaclass("basic")
+
+    if (
+        check_bool(project, "has_public_network")
+        or check_bool(project, "show_public_network")
+        or "public_network" in quotaclass
     ):
         if "public_network" in project:
             public_net_name = project.public_network
@@ -273,7 +284,7 @@ def manage_external_network_rbacs(project, domain):
 
 def check_volume_types(project, domain):
     if "quotaclass" in project:
-        quotaclass = project.quotaclass
+        quotaclass = get_quotaclass(project.quotaclass)
     else:
         logger.warning(f"{project.name} - quotaclass not set --> use default")
         if domain.name.startswith("ok"):
