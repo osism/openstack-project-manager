@@ -147,7 +147,7 @@ okeanos:
   volume:
     backup_gigabytes: 100
     backups: 10
-    gigabytes: 200
+    gigabytes: 500
     per_volume_gigabytes: 200
     snapshots: 100
     volumes: 100
