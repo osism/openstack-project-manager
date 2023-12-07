@@ -687,22 +687,14 @@ def check_homeproject_permissions(project, domain):
 
 
 def assign_admin_user(project, domain):
-    admin_domain = cloud.identity.find_domain(CONF.admin_domain)
     admin_name = f"{domain.name}-admin"
-
-    if not admin_domain:
-        logger.error(f"{project.name} - admin domain {CONF.admin_domain} not found")
-    else:
-        admin_domain_id = admin_domain.id
-        admin_user = cloud.identity.find_user(admin_name, domain_id=admin_domain_id)
-        try:
-            role = CACHE_ROLES["member"]
-            cloud.identity.assign_project_role_to_user(
-                project.id, admin_user.id, role.id
-            )
-            logger.info(f"{project.name} - assign admin user {admin_name}")
-        except:
-            pass
+    admin_user = cloud.identity.find_user(admin_name, domain_id=CACHE_ADMIN_DOMAIN.id)
+    try:
+        role = CACHE_ROLES["member"]
+        cloud.identity.assign_project_role_to_user(project.id, admin_user.id, role.id)
+        logger.info(f"{project.name} - assign admin user {admin_name}")
+    except:
+        pass
 
 
 def check_endpoints(project):
@@ -875,6 +867,13 @@ neutron = os_client_config.make_client("network", cloud=CONF.cloud)
 CACHE_ROLES = {}
 for role in cloud.identity.roles():
     CACHE_ROLES[role.name] = role
+
+# cache admin domain
+if CONF.assign_admin_user:
+    CACHE_ADMIN_DOMAIN = cloud.identity.find_domain(CONF.admin_domain)
+    if not CACHE_ADMIN_DOMAIN:
+        logger.error(f"admin domain {CONF.admin_domain} does not exist")
+        sys.exit(1)
 
 # check existence of project and/or domain
 
