@@ -88,6 +88,11 @@ result = conn.search_s(
 cloud = openstack.connect(cloud=CONF.cloud)
 domain = cloud.identity.find_domain(CONF.domain)
 
+# cache roles
+CACHE_ROLES = {}
+for role in cloud.identity.roles():
+    CACHE_ROLES[role.name] = role
+
 for a, b in result:
     if a == f"{ldap_admin_group_cn},{ldap_base_dn}":
         for x in b[ldap_search_attribute]:
@@ -103,7 +108,7 @@ for a, b in result:
                     )
                     for role_name in DEFAULT_ROLES:
                         try:
-                            role = cloud.identity.find_role(role_name)
+                            role = CACHE_ROLES[role_name]
                             cloud.identity.assign_project_role_to_user(
                                 project.id, user.id, role.id
                             )

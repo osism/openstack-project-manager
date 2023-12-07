@@ -43,7 +43,12 @@ def generate_password(password_length: int) -> str:
 
 
 # Connect to the OpenStack environment
-conn = openstack.connect(cloud=CONF.cloud)
+cloud = openstack.connect(cloud=CONF.cloud)
+
+# cache roles
+CACHE_ROLES = {}
+for role in cloud.identity.roles():
+    CACHE_ROLES[role.name] = role
 
 # Generate a random password from all ASCII characters + digits
 if not CONF.password:
@@ -53,34 +58,34 @@ else:
 
 # Establish dedicated connection to Keystone service
 # FIXME(berendt): use get_domain
-domain = conn.identity.find_domain(CONF.domain)
+domain = cloud.identity.find_domain(CONF.domain)
 if not domain:
-    domain = conn.create_domain(name=CONF.domain)
+    domain = cloud.create_domain(name=CONF.domain)
 
 # Find or create the user
 # FIXME(berendt): use get_project
 if CONF.domain_name_prefix:
-    project = conn.identity.find_project(
+    project = cloud.identity.find_project(
         f"{CONF.domain}-{CONF.project_name}", domain_id=domain.id
     )
 else:
-    project = conn.identity.find_project(CONF.project_name, domain_id=domain.id)
+    project = cloud.identity.find_project(CONF.project_name, domain_id=domain.id)
 
-user = conn.identity.find_user(CONF.name, domain_id=domain.id)
+user = cloud.identity.find_user(CONF.name, domain_id=domain.id)
 if not user:
-    user = conn.create_user(
+    user = cloud.create_user(
         name=CONF.name,
         password=password,
         default_project=project,
         domain_id=domain.id,
     )
 else:
-    conn.update_user(user, password=password)
+    cloud.update_user(user, password=password)
 
 for role_name in DEFAULT_ROLES:
     try:
-        role = conn.identity.find_role(role_name)
-        conn.identity.assign_project_role_to_user(project.id, user.id, role.id)
+        role = CACHE_ROLES[role_name]
+        cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
     except:
         pass
 

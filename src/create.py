@@ -87,7 +87,12 @@ def generate_password(password_length: int) -> str:
 
 
 # Connect to the OpenStack environment
-conn = openstack.connect(cloud=CONF.cloud)
+cloud = openstack.connect(cloud=CONF.cloud)
+
+# cache roles
+CACHE_ROLES = {}
+for role in cloud.identity.roles():
+    CACHE_ROLES[role.name] = role
 
 # Generate a random name in the form abcd-0123
 if CONF.random:
@@ -110,17 +115,17 @@ else:
 # Establish dedicated connection to Keystone service
 # FIXME(berendt): use get_domain
 domain_created = False
-domain = conn.identity.find_domain(CONF.domain)
+domain = cloud.identity.find_domain(CONF.domain)
 if not domain:
-    domain = conn.create_domain(name=CONF.domain)
+    domain = cloud.create_domain(name=CONF.domain)
     domain_created = True
 
 # Find or create the project
 if not CONF.create_domain:
     # FIXME(berendt): use get_project
-    project = conn.identity.find_project(name, domain_id=domain.id)
+    project = cloud.identity.find_project(name, domain_id=domain.id)
     if not project:
-        project = conn.create_project(name=name, domain_id=domain.id)
+        project = cloud.create_project(name=name, domain_id=domain.id)
 
     # FIXME(berendt): use openstacksdk
     keystone = os_client_config.make_client("identity", cloud=CONF.cloud)
@@ -194,9 +199,9 @@ if not CONF.create_domain:
 
     # Find or create the user of the project and assign the default roles
     if CONF.create_user:
-        user = conn.identity.find_user(name, domain_id=domain.id)
+        user = cloud.identity.find_user(name, domain_id=domain.id)
         if not user:
-            user = conn.create_user(
+            user = cloud.create_user(
                 name=name,
                 password=password,
                 default_project=project,
@@ -204,12 +209,12 @@ if not CONF.create_domain:
                 email=CONF.owner,
             )
         else:
-            conn.update_user(user, password=password)
+            cloud.update_user(user, password=password)
 
         for role_name in DEFAULT_ROLES:
             try:
-                role = conn.identity.find_role(role_name)
-                conn.identity.assign_project_role_to_user(project.id, user.id, role.id)
+                role = CACHE_ROLES[role_name]
+                cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
             except:
                 pass
 
@@ -218,23 +223,23 @@ admin_password = None
 admin_name = f"{CONF.domain}-admin"
 
 if CONF.assign_admin_user:
-    admin_domain = conn.identity.find_domain(CONF.admin_domain)
+    admin_domain = cloud.identity.find_domain(CONF.admin_domain)
     if not admin_domain:
         logger.error(f"Admin domain {CONF.admin_domain} not found")
     else:
         admin_domain_id = admin_domain.id
-        admin_user = conn.identity.find_user(admin_name, domain_id=admin_domain_id)
+        admin_user = cloud.identity.find_user(admin_name, domain_id=admin_domain_id)
 
         if not admin_user and CONF.create_admin_user:
             admin_password = generate_password(CONF.password_length)
-            admin_user = conn.create_user(
+            admin_user = cloud.create_user(
                 name=admin_name, password=admin_password, domain_id=admin_domain_id
             )
 
             if domain_created:
                 try:
-                    role = conn.identity.find_role("domain-manager")
-                    conn.identity.assign_domain_role_to_user(
+                    role = CACHE_ROLES["domain-manager"]
+                    cloud.identity.assign_domain_role_to_user(
                         domain.id, admin_user.id, role.id
                     )
                 except:
@@ -243,8 +248,8 @@ if CONF.assign_admin_user:
         if admin_user and not CONF.create_domain:
             for role_name in DEFAULT_ADMIN_ROLES:
                 try:
-                    role = conn.identity.find_role(role_name)
-                    conn.identity.assign_project_role_to_user(
+                    role = CACHE_ROLES[role_name]
+                    cloud.identity.assign_project_role_to_user(
                         project.id, admin_user.id, role.id
                     )
                 except:
