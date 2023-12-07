@@ -680,7 +680,7 @@ def check_homeproject_permissions(project, domain):
     )
     for role_name in DEFAULT_ROLES:
         try:
-            role = cloud.identity.find_role(role_name)
+            role = CACHE_ROLES[role_name]
             cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
         except:
             pass
@@ -696,7 +696,7 @@ def assign_admin_user(project, domain):
         admin_domain_id = admin_domain.id
         admin_user = cloud.identity.find_user(admin_name, domain_id=admin_domain_id)
         try:
-            role = cloud.identity.find_role("member")
+            role = CACHE_ROLES["member"]
             cloud.identity.assign_project_role_to_user(
                 project.id, admin_user.id, role.id
             )
@@ -870,6 +870,11 @@ with open(CONF.endpoints, "r") as fp:
 cloud = openstack.connect(cloud=CONF.cloud)
 KEYSTONE = os_client_config.make_client("identity", cloud=CONF.cloud)
 neutron = os_client_config.make_client("network", cloud=CONF.cloud)
+
+# cache roles
+CACHE_ROLES = {}
+for role in cloud.identity.roles():
+    CACHE_ROLES[role.name] = role
 
 # check existence of project and/or domain
 

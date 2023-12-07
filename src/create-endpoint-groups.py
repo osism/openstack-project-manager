@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 CLOUD = os.environ.get("CLOUD", "admin")
 
-conn = openstack.connect(cloud=CLOUD)
+cloud = openstack.connect(cloud=CLOUD)
 keystone = os_client_config.make_client("identity", cloud=CLOUD)
 
 existing_endpoint_groups = {x.name: x for x in keystone.endpoint_groups.list()}
