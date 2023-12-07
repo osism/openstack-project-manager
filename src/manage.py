@@ -688,7 +688,15 @@ def check_homeproject_permissions(project, domain):
 
 def assign_admin_user(project, domain):
     admin_name = f"{domain.name}-admin"
-    admin_user = cloud.identity.find_user(admin_name, domain_id=CACHE_ADMIN_DOMAIN.id)
+
+    if admin_name in CACHE_ADMIN_USERS:
+        admin_user = CACHE_ADMIN_USERS[admin_name]
+    else:
+        admin_user = cloud.identity.find_user(
+            admin_name, domain_id=CACHE_ADMIN_DOMAIN.id
+        )
+        CACHE_ADMIN_USERS[admin_name] = admin_user
+
     try:
         role = CACHE_ROLES["member"]
         cloud.identity.assign_project_role_to_user(project.id, admin_user.id, role.id)
@@ -874,6 +882,9 @@ if CONF.assign_admin_user:
     if not CACHE_ADMIN_DOMAIN:
         logger.error(f"admin domain {CONF.admin_domain} does not exist")
         sys.exit(1)
+
+# cache admin users
+CACHE_ADMIN_USERS: dict = {}
 
 # check existence of project and/or domain
 
