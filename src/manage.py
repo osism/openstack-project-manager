@@ -33,7 +33,7 @@ opts = [
 CONF.register_cli_opts(opts)
 CONF(sys.argv[1:], project=PROJECT_NAME)
 
-DEFAULT_ROLES = ["creator", "member", "heat_stack_owner", "load-balancer_member"]
+DEFAULT_ROLES = ["member", "load-balancer_member"]
 
 UNMANAGED_PROJECTS = ["admin", "service"]
 
