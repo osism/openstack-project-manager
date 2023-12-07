@@ -28,7 +28,7 @@ CONF.register_cli_opts(opts)
 CONF(sys.argv[1:], project=PROJECT_NAME)
 
 # Default roles to be assigned to a new user for a project
-DEFAULT_ROLES = ["creator", "member", "heat_stack_owner", "load-balancer_member"]
+DEFAULT_ROLES = ["member", "load-balancer_member"]
 
 if CONF.debug:
     level = "DEBUG"
