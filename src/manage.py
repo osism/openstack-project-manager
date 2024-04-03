@@ -177,6 +177,9 @@ def check_quota(project, cloud):
         else:
             quota_should_be = quotaclass["network"][key] * multiplier_network
 
+        if quota_should_be < 0:
+            quota_should_be = -1
+
         if quota_should_be != quotanetwork[key]:
             logger.info(
                 f"{project.name} - network[{key}] = {quota_should_be} != {quotanetwork[key]}"
@@ -201,6 +204,9 @@ def check_quota(project, cloud):
         else:
             quota_should_be = quotaclass["compute"][key] * tmultiplier
 
+        if quota_should_be < 0:
+            quota_should_be = -1
+
         if quota_should_be != quotacompute[key]:
             logger.info(
                 f"{project.name} - compute[{key}] = {quota_should_be} != {quotacompute[key]}"
@@ -220,6 +226,9 @@ def check_quota(project, cloud):
             quota_should_be = quotaclass["volume"][key]
         else:
             quota_should_be = quotaclass["volume"][key] * tmultiplier
+
+        if quota_should_be < 0:
+            quota_should_be = -1
 
         if quota_should_be != quotavolume[key]:
             logger.info(
