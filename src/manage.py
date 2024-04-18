@@ -242,11 +242,13 @@ def manage_external_network_rbacs(project, domain):
     if "quotaclass" in project:
         quotaclass = get_quotaclass(project.quotaclass)
     else:
-        logger.warning(f"{project.name} - quotaclass not set --> use default")
         if domain.name.startswith("ok"):
             quotaclass = get_quotaclass("okeanos")
         else:
             quotaclass = get_quotaclass("basic")
+        logger.warning(
+            f"{project.name} - quotaclass not set --> use default of {quotaclass}"
+        )
 
     if (
         check_bool(project, "has_public_network")
