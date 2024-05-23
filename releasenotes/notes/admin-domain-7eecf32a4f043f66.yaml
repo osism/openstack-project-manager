@@ -1,5 +1,0 @@
----
-features:
-  - |
-    With `--admin-domain` it is now possible to specifcy the user domain for the
-    admin account.

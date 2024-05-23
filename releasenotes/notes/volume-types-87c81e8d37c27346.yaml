@@ -1,5 +1,0 @@
----
-features:
-  - |
-    It's now possible to add private volume types to a quota class.
-    Private volume types will then be available in those projects.
