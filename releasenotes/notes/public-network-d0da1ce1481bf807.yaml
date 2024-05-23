@@ -1,5 +1,0 @@
----
-features:
-  - |
-    With the `public_network` parameter it is now possible to enable a public
-    network on a project with the help of a quota class.

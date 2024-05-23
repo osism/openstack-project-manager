@@ -1,5 +1,0 @@
----
-features:
-  - |
-    With the `--create-domain` argument it's possible to create a new
-    domain without creating a new project.
