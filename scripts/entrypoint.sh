@@ -10,10 +10,4 @@ echo "SHELL=/bin/bash" >> /etc/cron.d/openstack-project-manager
 echo "BASH_ENV=/etc/environment" >> /etc/cron.d/openstack-project-manager
 echo "$SCHEDULE root $croncmd" >> /etc/cron.d/openstack-project-manager
 
-echo "$@"
-
-# execute CMD
-#exec "$@"
-
-
 cron -l 2 -f
