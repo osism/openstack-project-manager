@@ -7,112 +7,123 @@ from dynaconf import Dynaconf
 import ldap
 from loguru import logger
 import openstack
-from oslo_config import cfg
-
-PROJECT_NAME = "openstack-project-manager"
-CONF = cfg.CONF
-opts = [
-    cfg.BoolOpt("debug", help="Debug mode", default=False),
-    cfg.StrOpt("cloud", help="Cloud name in clouds.yml", default="admin"),
-    cfg.StrOpt("domain", help="Domain to be managed", default="default"),
-    cfg.StrOpt("ldap-server", help="LDAP server URL"),
-    cfg.StrOpt("ldap-username", help="LDAP username"),
-    cfg.StrOpt("ldap-password", help="LDAP password"),
-    cfg.StrOpt("ldap-base-dn", help="LDAP base DN"),
-    cfg.StrOpt("ldap-admin-group-cn", help="LDAP admin group CN"),
-    cfg.StrOpt("ldap-object-class", help="LDAP object class"),
-    cfg.StrOpt("ldap-search-attribute", help="LDAP search attribute"),
-]
-CONF.register_cli_opts(opts)
-CONF(sys.argv[1:], project=PROJECT_NAME)
+import typer
 
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
-if CONF.debug:
-    level = "DEBUG"
-    log_fmt = (
-        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
-        "<level>{message}</level>"
+
+def run(
+    debug: bool = typer.Option(False, "--debug", help="Debug mode"),
+    cloud_name: str = typer.Option("admin", "--cloud", help="Cloud name in clouds.yml"),
+    domain_name: str = typer.Option("default", "--domain", help="Domain to be managed"),
+    ldap_server: str = typer.Option(None, "--ldap-server", help="LDAP server URL"),
+    ldap_username: str = typer.Option(None, "--ldap-username", help="LDAP username"),
+    ldap_password: str = typer.Option(None, "--ldap-password", help="LDAP password"),
+    ldap_base_dn: str = typer.Option(None, "--ldap-base-dn", help="LDAP base DN"),
+    ldap_admin_group_cn: str = typer.Option(
+        None, "--ldap-admin-group-cn", help="LDAP admin group CN"
+    ),
+    ldap_object_class: str = typer.Option(
+        None, "--ldap-object-class", help="LDAP object class"
+    ),
+    ldap_search_attribute: str = typer.Option(
+        None, "--ldap-search-attribute", help="LDAP search attribute"
+    ),
+) -> None:
+
+    if debug:
+        level = "DEBUG"
+        log_fmt = (
+            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
+            "<level>{message}</level>"
+        )
+    else:
+        level = "INFO"
+        log_fmt = (
+            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
+            "<level>{message}</level>"
+        )
+
+    logger.remove()
+    logger.add(sys.stderr, format=log_fmt, level=level, colorize=True)
+
+    # read configuration
+
+    # NOTE: This toxdir thing is super hacky, but works that way for us for now.
+    toxdir = Path(__file__).parents[1]
+    settings = Dynaconf(
+        envvar_prefix="OPM",
+        root_path=toxdir,
+        settings_files=["settings.toml"],
+        environments=True,
+        env=domain_name,
     )
-else:
-    level = "INFO"
-    log_fmt = (
-        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
-        "<level>{message}</level>"
+
+    # set ldap parameters
+
+    ldap_base_dn = ldap_base_dn or settings.get("ldap_base_dn", None)
+    ldap_admin_group_cn = ldap_admin_group_cn or settings.get(
+        "ldap_admin_group_cn", None
+    )
+    ldap_object_class = ldap_object_class or settings.get("ldap_object_class", None)
+    ldap_password = ldap_password or settings.get("ldap_password", None)
+    ldap_search_attribute = ldap_search_attribute or settings.get(
+        "ldap_search_attribute", None
+    )
+    ldap_server = ldap_server or settings.get("ldap_server", None)
+    ldap_username = ldap_username or settings.get("ldap_username", None)
+
+    # set project parameters
+
+    # get ldap information
+
+    conn = ldap.initialize(ldap_server)
+    conn.simple_bind_s(ldap_username, ldap_password)
+
+    search_filter = f"(&(objectClass={ldap_object_class})({ldap_admin_group_cn}))"
+    result = conn.search_s(
+        ldap_base_dn, ldap.SCOPE_SUBTREE, search_filter, [ldap_search_attribute]
     )
 
-logger.remove()
-logger.add(sys.stderr, format=log_fmt, level=level, colorize=True)
+    # check openstack projects
 
-# read configuration
+    os_cloud = openstack.connect(cloud=cloud_name)
+    domain = os_cloud.identity.find_domain(domain_name)
 
-# NOTE: This toxdir thing is super hacky, but works that way for us for now.
-toxdir = Path(__file__).parents[1]
-settings = Dynaconf(
-    envvar_prefix="OPM",
-    root_path=toxdir,
-    settings_files=["settings.toml"],
-    environments=True,
-    env=CONF.domain,
-)
+    # cache roles
+    CACHE_ROLES = {}
+    for role in os_cloud.identity.roles():
+        CACHE_ROLES[role.name] = role
 
-# set ldap parameters
+    for a, b in result:
+        if a == f"{ldap_admin_group_cn},{ldap_base_dn}":
+            for x in b[ldap_search_attribute]:
+                username = x.decode("utf-8")
 
-ldap_base_dn = CONF.ldap_base_dn or settings.get("ldap_base_dn", None)
-ldap_admin_group_cn = CONF.ldap_admin_group_cn or settings.get(
-    "ldap_admin_group_cn", None
-)
-ldap_object_class = CONF.ldap_object_class or settings.get("ldap_object_class", None)
-ldap_password = CONF.ldap_password or settings.get("ldap_password", None)
-ldap_search_attribute = CONF.ldap_search_attribute or settings.get(
-    "ldap_search_attribute", None
-)
-ldap_server = CONF.ldap_server or settings.get("ldap_server", None)
-ldap_username = CONF.ldap_username or settings.get("ldap_username", None)
+                logger.debug(f"Checking user {username}")
+                user = os_cloud.identity.find_user(username, domain_id=domain.id)
 
-# set project parameters
+                if user:
+                    for project in os_cloud.identity.projects(domain_id=domain.id):
+                        logger.info(
+                            f"{project.name} - ensure admin project permissions for user = {username}, user_id = {user.id}"
+                        )
+                        for role_name in DEFAULT_ROLES:
+                            try:
+                                role = CACHE_ROLES[role_name]
+                                os_cloud.identity.assign_project_role_to_user(
+                                    project.id, user.id, role.id
+                                )
+                            except:
+                                pass
 
-# get ldap information
+    conn.unbind_s()
 
-conn = ldap.initialize(ldap_server)
-conn.simple_bind_s(ldap_username, ldap_password)
 
-search_filter = f"(&(objectClass={ldap_object_class})({ldap_admin_group_cn}))"
-result = conn.search_s(
-    ldap_base_dn, ldap.SCOPE_SUBTREE, search_filter, [ldap_search_attribute]
-)
+def main() -> None:
+    typer.run(run)
 
-# check openstack projects
 
-cloud = openstack.connect(cloud=CONF.cloud)
-domain = cloud.identity.find_domain(CONF.domain)
-
-# cache roles
-CACHE_ROLES = {}
-for role in cloud.identity.roles():
-    CACHE_ROLES[role.name] = role
-
-for a, b in result:
-    if a == f"{ldap_admin_group_cn},{ldap_base_dn}":
-        for x in b[ldap_search_attribute]:
-            username = x.decode("utf-8")
-
-            logger.debug(f"Checking user {username}")
-            user = cloud.identity.find_user(username, domain_id=domain.id)
-
-            if user:
-                for project in cloud.identity.projects(domain_id=domain.id):
-                    logger.info(
-                        f"{project.name} - ensure admin project permissions for user = {username}, user_id = {user.id}"
-                    )
-                    for role_name in DEFAULT_ROLES:
-                        try:
-                            role = CACHE_ROLES[role_name]
-                            cloud.identity.assign_project_role_to_user(
-                                project.id, user.id, role.id
-                            )
-                        except:
-                            pass
-
-conn.unbind_s()
+if __name__ == "__main__":
+    main()
