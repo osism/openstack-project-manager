@@ -2,37 +2,14 @@
 
 import random
 import string
-import sys
 
-from oslo_config import cfg
+import typer
 import openstack
 from tabulate import tabulate
 
 
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
-
-PROJECT_NAME = "openstack-user-manager"
-CONF = cfg.CONF
-
-# Available parameters for the CLI
-opts = [
-    cfg.BoolOpt("random", help="Generate random names", default=False),
-    cfg.BoolOpt(
-        "domain-name-prefix",
-        help="Add domain name as prefix to the project name",
-        default=True,
-    ),
-    cfg.IntOpt("password-length", help="Password length", default=16),
-    cfg.StrOpt("cloud", help="Managed cloud", default="admin"),
-    cfg.StrOpt("domain", help="Domain", default="default"),
-    cfg.StrOpt("name", help="Username", default=""),
-    cfg.StrOpt("project-name", help="Projectname", default=""),
-    cfg.StrOpt("password", help="Password", default=None),
-]
-CONF.register_cli_opts(opts)
-
-CONF(sys.argv[1:], project=PROJECT_NAME)
 
 
 def generate_password(password_length: int) -> str:
@@ -42,59 +19,82 @@ def generate_password(password_length: int) -> str:
     )
 
 
-# Connect to the OpenStack environment
-cloud = openstack.connect(cloud=CONF.cloud)
+def run(
+    random: bool = typer.Option(False, "--random", help="Generate random names"),
+    domain_name_prefix: bool = typer.Option(
+        True,
+        "--domain-name-prefix",
+        help="Add domain name as prefix to the project name",
+    ),
+    password_length: int = typer.Option(
+        16, "--password-length", help="Password length"
+    ),
+    cloud_name: str = typer.Option("admin", "--cloud", help="Managed cloud"),
+    domain_name: str = typer.Option("default", "--domain", help="Domain"),
+    name: str = typer.Option("", "--name", help="Username"),
+    project_name: str = typer.Option("", "--project-name", help="Projectname"),
+    password: str = typer.Option(None, "--password", help="Password"),
+) -> None:
 
-# cache roles
-CACHE_ROLES = {}
-for role in cloud.identity.roles():
-    CACHE_ROLES[role.name] = role
+    # Connect to the OpenStack environment
+    os_cloud = openstack.connect(cloud=cloud_name)
 
-# Generate a random password from all ASCII characters + digits
-if not CONF.password:
-    password = generate_password(CONF.password_length)
-else:
-    password = CONF.password
+    # cache roles
+    CACHE_ROLES = {}
+    for role in os_cloud.identity.roles():
+        CACHE_ROLES[role.name] = role
 
-# Establish dedicated connection to Keystone service
-# FIXME(berendt): use get_domain
-domain = cloud.identity.find_domain(CONF.domain)
-if not domain:
-    domain = cloud.create_domain(name=CONF.domain)
+    # Generate a random password from all ASCII characters + digits
+    if not password:
+        password = generate_password(password_length)
 
-# Find or create the user
-# FIXME(berendt): use get_project
-if CONF.domain_name_prefix:
-    project = cloud.identity.find_project(
-        f"{CONF.domain}-{CONF.project_name}", domain_id=domain.id
-    )
-else:
-    project = cloud.identity.find_project(CONF.project_name, domain_id=domain.id)
+    # Establish dedicated connection to Keystone service
+    # FIXME(berendt): use get_domain
+    domain = os_cloud.identity.find_domain(domain_name)
+    if not domain:
+        domain = os_cloud.create_domain(name=domain_name)
 
-user = cloud.identity.find_user(CONF.name, domain_id=domain.id)
-if not user:
-    user = cloud.create_user(
-        name=CONF.name,
-        password=password,
-        default_project=project,
-        domain_id=domain.id,
-    )
-else:
-    cloud.update_user(user, password=password)
+    # Find or create the user
+    # FIXME(berendt): use get_project
+    if domain_name_prefix:
+        project = os_cloud.identity.find_project(
+            f"{domain_name}-{project_name}", domain_id=domain.id
+        )
+    else:
+        project = os_cloud.identity.find_project(project_name, domain_id=domain.id)
 
-for role_name in DEFAULT_ROLES:
-    try:
-        role = CACHE_ROLES[role_name]
-        cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
-    except:
-        pass
+    user = os_cloud.identity.find_user(name, domain_id=domain.id)
+    if not user:
+        user = os_cloud.create_user(
+            name=name,
+            password=password,
+            default_project=project,
+            domain_id=domain.id,
+        )
+    else:
+        os_cloud.update_user(user, password=password)
 
-result = [
-    ["domain", CONF.domain, domain.id],
-    ["project", CONF.project_name, project.id],
-]
+    for role_name in DEFAULT_ROLES:
+        try:
+            role = CACHE_ROLES[role_name]
+            os_cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
+        except:
+            pass
 
-result.append(["user", CONF.name, user.id])
-result.append(["password", password, ""])
+    result = [
+        ["domain", domain_name, domain.id],
+        ["project", project_name, project.id],
+    ]
 
-print(tabulate(result, headers=["name", "value", "id"], tablefmt="psql"))
+    result.append(["user", name, user.id])
+    result.append(["password", password, ""])
+
+    print(tabulate(result, headers=["name", "value", "id"], tablefmt="psql"))
+
+
+def main() -> None:
+    typer.run(run)
+
+
+if __name__ == "__main__":
+    main()
