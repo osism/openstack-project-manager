@@ -2,7 +2,14 @@
 - job:
     name: openstack-project-manager-mypy
     parent: mypy
-    pre-run: playbooks/pre.yml
+    pre-run: playbooks/mypy.yml
+
+- job:
+    name: openstack-project-manager-tox
+    parent: tox
+    pre-run: playbooks/tox.yml
+    vars:
+      tox_envlist: test
 
 - project:
     merge-mode: squash-merge
@@ -11,17 +18,22 @@
       jobs:
         - flake8
         - openstack-project-manager-mypy
+        - openstack-project-manager-tox
         - yamllint
         - python-black
+
     gate:
       jobs:
         - flake8
         - openstack-project-manager-mypy
+        - openstack-project-manager-tox
         - yamllint
         - python-black
+
     periodic-daily:
       jobs:
         - flake8
         - openstack-project-manager-mypy
+        - openstack-project-manager-tox
         - yamllint
         - python-black

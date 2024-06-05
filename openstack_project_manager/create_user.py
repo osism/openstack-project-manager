@@ -22,9 +22,6 @@ def generate_password(password_length: int) -> str:
 
 
 def run(
-    random: Annotated[
-        bool, typer.Option("--random/--norandom", help="Generate random names")
-    ] = False,
     domain_name_prefix: Annotated[
         bool,
         typer.Option(
