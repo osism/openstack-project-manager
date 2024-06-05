@@ -11,7 +11,8 @@ import openstack
 import os_client_config
 import yaml
 import typer
-from typing import List, Tuple
+from typing import List, Optional, Tuple
+from typing_extensions import Annotated
 
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
@@ -1026,28 +1027,45 @@ def process_project(
 
 
 def run(
-    assign_admin_user: bool = typer.Option(
-        False, "--assign-admin-user", help="Assign admin user"
-    ),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Do not really do anything"),
-    manage_endpoints: bool = typer.Option(
-        False, "--manage-endpoints", help="Manage endpoints"
-    ),
-    manage_homeprojects: bool = typer.Option(
-        False, "--manage-homeprojects", help="Manage home projects"
-    ),
-    admin_domain: str = typer.Option("default", "--admin-domain", help="Admin domain"),
-    classes: str = typer.Option(
-        "etc/classes.yml", "--classes", help="Path to the classes.yml file"
-    ),
-    endpoints: str = typer.Option(
-        "etc/endpoints.yml", "--endpoints", help="Path to the endpoints.yml file"
-    ),
-    cloud_name: str = typer.Option(
-        "admin", "--cloud", help="Cloud name in clouds.yaml"
-    ),
-    domain_name: str = typer.Option(None, "--domain", help="Domain to be managed"),
-    project_name: str = typer.Option(None, "--name", help="Project to be managed"),
+    assign_admin_user: Annotated[
+        bool,
+        typer.Option(
+            "--assign-admin-user/--noassign-admin-user", help="Assign admin user"
+        ),
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run/--nodry-run", help="Do not really do anything")
+    ] = False,
+    manage_endpoints: Annotated[
+        bool,
+        typer.Option(
+            "--manage-endpoints/--nomanage-endpoints", help="Manage endpoints"
+        ),
+    ] = False,
+    manage_homeprojects: Annotated[
+        bool,
+        typer.Option(
+            "--manage-homeprojects/--nomanage-homeprojects", help="Manage home projects"
+        ),
+    ] = False,
+    admin_domain: Annotated[
+        str, typer.Option("--admin-domain", help="Admin domain")
+    ] = "default",
+    classes: Annotated[
+        str, typer.Option("--classes", help="Path to the classes.yml file")
+    ] = "etc/classes.yml",
+    endpoints: Annotated[
+        str, typer.Option("--endpoints", help="Path to the endpoints.yml file")
+    ] = "etc/endpoints.yml",
+    cloud_name: Annotated[
+        str, typer.Option("--cloud", help="Cloud name in clouds.yaml")
+    ] = "admin",
+    domain_name: Annotated[
+        Optional[str], typer.Option("--domain", help="Domain to be managed")
+    ] = None,
+    project_name: Annotated[
+        Optional[str], typer.Option("--name", help="Project to be managed")
+    ] = None,
 ) -> None:
 
     configuration = Configuration(
