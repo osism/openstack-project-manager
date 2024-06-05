@@ -4,8 +4,10 @@ import random
 import string
 
 import typer
+from typing_extensions import Annotated
 import openstack
 from tabulate import tabulate
+from typing import Optional
 
 
 # Default roles to be assigned to a new user for a project
@@ -20,20 +22,28 @@ def generate_password(password_length: int) -> str:
 
 
 def run(
-    random: bool = typer.Option(False, "--random", help="Generate random names"),
-    domain_name_prefix: bool = typer.Option(
-        True,
-        "--domain-name-prefix",
-        help="Add domain name as prefix to the project name",
-    ),
-    password_length: int = typer.Option(
-        16, "--password-length", help="Password length"
-    ),
-    cloud_name: str = typer.Option("admin", "--cloud", help="Managed cloud"),
-    domain_name: str = typer.Option("default", "--domain", help="Domain"),
-    name: str = typer.Option("", "--name", help="Username"),
-    project_name: str = typer.Option("", "--project-name", help="Projectname"),
-    password: str = typer.Option(None, "--password", help="Password"),
+    random: Annotated[
+        bool, typer.Option("--random/--norandom", help="Generate random names")
+    ] = False,
+    domain_name_prefix: Annotated[
+        bool,
+        typer.Option(
+            "--domain-name-prefix/--nodomain-name-prefix",
+            help="Add domain name as prefix to the project name",
+        ),
+    ] = True,
+    password_length: Annotated[
+        int, typer.Option("--password-length", help="Password length")
+    ] = 16,
+    cloud_name: Annotated[str, typer.Option("--cloud", help="Managed cloud")] = "admin",
+    domain_name: Annotated[str, typer.Option("--domain", help="Domain")] = "default",
+    name: Annotated[str, typer.Option("--name", help="Username")] = "",
+    project_name: Annotated[
+        str, typer.Option("--project-name", help="Projectname")
+    ] = "",
+    password: Annotated[
+        Optional[str], typer.Option("--password", help="Password")
+    ] = None,
 ) -> None:
 
     # Connect to the OpenStack environment

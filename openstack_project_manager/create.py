@@ -6,9 +6,11 @@ import sys
 
 from loguru import logger
 import typer
+from typing_extensions import Annotated
 import os_client_config
 import openstack
 from tabulate import tabulate
+from typing import Optional
 
 
 # Default roles to be assigned to a new user for a project
@@ -33,64 +35,105 @@ def generate_password(password_length: int) -> str:
 
 
 def run(
-    assign_admin_user: bool = typer.Option(
-        True, "--assign-admin-user", help="Assign admin user"
-    ),
-    create_admin_user: bool = typer.Option(
-        True, "--create-admin-user", help="Create admin user"
-    ),
-    create_domain: bool = typer.Option(
-        False, "--create-domain", help="Create domain only"
-    ),
-    create_user: bool = typer.Option(False, "--create-user", help="Create user"),
-    domain_name_prefix: bool = typer.Option(
-        True,
-        "--domain-name-prefix",
-        help="Add domain name as prefix to the project name",
-    ),
-    has_service_network: bool = typer.Option(
-        False, "--has-service-network", help="Has service network infrastructure"
-    ),
-    has_public_network: bool = typer.Option(
-        True, "--has-public-network", help="Has public network infrastructure"
-    ),
-    has_shared_images: bool = typer.Option(
-        True, "--has-shared-images", help="Has shared images"
-    ),
-    use_random: bool = typer.Option(False, "--random", help="Generate random names"),
-    managed_network_resources: bool = typer.Option(
-        False, "--managed-network-resources", help="Manage the network resources"
-    ),
-    password_length: int = typer.Option(
-        16, "--password-length", help="Password length"
-    ),
-    quota_multiplier: int = typer.Option(
-        "1", "--quota-multiplier", help="Quota multiplier"
-    ),
-    quota_multiplier_compute: int = typer.Option(
-        None, "--quota-multiplier-compute", help="Quota multiplier compute"
-    ),
-    quota_multiplier_network: int = typer.Option(
-        None, "--quota-multiplier-network", help="Quota multiplier network"
-    ),
-    quota_multiplier_storage: int = typer.Option(
-        None, "--quota-multiplier-storage", help="Quota multiplier storage"
-    ),
-    quota_router: int = typer.Option(1, "--quota-router", help="Quota router"),
-    admin_domain: str = typer.Option("default", "--admin-domain", help="Admin domain"),
-    cloud_name: str = typer.Option("admin", "--cloud", help="Managed cloud"),
-    domain_name: str = typer.Option("default", "--domain", help="Domain"),
-    internal_id: str = typer.Option(None, "--internal-id", help="Internal ID"),
-    name: str = typer.Option("sandbox", "--name", help="Projectname"),
-    owner: str = typer.Option("", "--owner", help="Owner of the project"),
-    password: str = typer.Option(None, "--password", help="Password"),
-    public_network: str = typer.Option(
-        "public", "--public-network", help="Public network"
-    ),
-    quota_class: str = typer.Option("basic", "--quota-class", help="Quota class"),
-    service_network_cidr: str = typer.Option(
-        "", "--service-network-cidr", help="Service network CIDR"
-    ),
+    assign_admin_user: Annotated[
+        bool,
+        typer.Option(
+            "--assign-admin-user/--noassign-admin-user", help="Assign admin user"
+        ),
+    ] = True,
+    create_admin_user: Annotated[
+        bool,
+        typer.Option(
+            "--create-admin-user/--nocreate-admin-user", help="Create admin user"
+        ),
+    ] = True,
+    create_domain: Annotated[
+        bool,
+        typer.Option("--create-domain/--nocreate-domain", help="Create domain only"),
+    ] = False,
+    create_user: Annotated[
+        bool, typer.Option("--create-user/--nocreate-user", help="Create user")
+    ] = False,
+    domain_name_prefix: Annotated[
+        bool,
+        typer.Option(
+            "--domain-name-prefix/--nodomain-name-prefix",
+            help="Add domain name as prefix to the project name",
+        ),
+    ] = True,
+    has_service_network: Annotated[
+        bool,
+        typer.Option(
+            "--has-service-network/--nohas-service-network",
+            help="Has service network infrastructure",
+        ),
+    ] = False,
+    has_public_network: Annotated[
+        bool,
+        typer.Option(
+            "--has-public-network/--nohas-public-network",
+            help="Has public network infrastructure",
+        ),
+    ] = True,
+    has_shared_images: Annotated[
+        bool,
+        typer.Option(
+            "--has-shared-images/--nohas-shared-images", help="Has shared images"
+        ),
+    ] = True,
+    use_random: Annotated[
+        bool, typer.Option("--random/--norandom", help="Generate random names")
+    ] = False,
+    managed_network_resources: Annotated[
+        bool,
+        typer.Option(
+            "--managed-network-resources/--nomanaged-network-resources",
+            help="Manage the network resources",
+        ),
+    ] = False,
+    password_length: Annotated[
+        int, typer.Option("--password-length", help="Password length")
+    ] = 16,
+    quota_multiplier: Annotated[
+        int, typer.Option("--quota-multiplier", help="Quota multiplier")
+    ] = 1,
+    quota_multiplier_compute: Annotated[
+        Optional[int],
+        typer.Option("--quota-multiplier-compute", help="Quota multiplier compute"),
+    ] = None,
+    quota_multiplier_network: Annotated[
+        Optional[int],
+        typer.Option("--quota-multiplier-network", help="Quota multiplier network"),
+    ] = None,
+    quota_multiplier_storage: Annotated[
+        Optional[int],
+        typer.Option("--quota-multiplier-storage", help="Quota multiplier storage"),
+    ] = None,
+    quota_router: Annotated[
+        int, typer.Option("--quota-router", help="Quota router")
+    ] = 1,
+    admin_domain: Annotated[
+        str, typer.Option("--admin-domain", help="Admin domain")
+    ] = "default",
+    cloud_name: Annotated[str, typer.Option("--cloud", help="Managed cloud")] = "admin",
+    domain_name: Annotated[str, typer.Option("--domain", help="Domain")] = "default",
+    internal_id: Annotated[
+        Optional[str], typer.Option("--internal-id", help="Internal ID")
+    ] = None,
+    name: Annotated[str, typer.Option("--name", help="Projectname")] = "sandbox",
+    owner: Annotated[str, typer.Option("--owner", help="Owner of the project")] = "",
+    password: Annotated[
+        Optional[str], typer.Option("--password", help="Password")
+    ] = None,
+    public_network: Annotated[
+        str, typer.Option("--public-network", help="Public network")
+    ] = "public",
+    quota_class: Annotated[
+        str, typer.Option("--quota-class", help="Quota class")
+    ] = "basic",
+    service_network_cidr: Annotated[
+        str, typer.Option("--service-network-cidr", help="Service network CIDR")
+    ] = "",
 ) -> None:
 
     # Connect to the OpenStack environment
