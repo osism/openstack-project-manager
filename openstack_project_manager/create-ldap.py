@@ -9,26 +9,45 @@ import ldap
 from loguru import logger
 import openstack
 import typer
+from typing_extensions import Annotated
+from typing import Optional
 
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
 
 def run(
-    debug: bool = typer.Option(False, "--debug", help="Debug mode"),
-    cloud_name: str = typer.Option("admin", "--cloud", help="Cloud name in clouds.yml"),
-    domain_name: str = typer.Option("default", "--domain", help="Domain to be managed"),
-    ldap_server: str = typer.Option(None, "--ldap-server", help="LDAP server URL"),
-    ldap_username: str = typer.Option(None, "--ldap-username", help="LDAP username"),
-    ldap_password: str = typer.Option(None, "--ldap-password", help="LDAP password"),
-    ldap_base_dn: str = typer.Option(None, "--ldap-base-dn", help="LDAP base DN"),
-    ldap_group_cn: str = typer.Option(None, "--ldap-group-cn", help="LDAP group CN"),
-    ldap_object_class: str = typer.Option(
-        None, "--ldap-object-class", help="LDAP object class"
-    ),
-    ldap_search_attribute: str = typer.Option(
-        None, "--ldap-search-attribute", help="LDAP search attribute"
-    ),
+    debug: Annotated[
+        bool, typer.Option("--debug/--nodebug", help="Debug mode")
+    ] = False,
+    cloud_name: Annotated[
+        str, typer.Option("--cloud", help="Cloud name in clouds.yml")
+    ] = "admin",
+    domain_name: Annotated[
+        str, typer.Option("--domain", help="Domain to be managed")
+    ] = "default",
+    ldap_server: Annotated[
+        Optional[str], typer.Option("--ldap-server", help="LDAP server URL")
+    ] = None,
+    ldap_username: Annotated[
+        Optional[str], typer.Option("--ldap-username", help="LDAP username")
+    ] = None,
+    ldap_password: Annotated[
+        Optional[str], typer.Option("--ldap-password", help="LDAP password")
+    ] = None,
+    ldap_base_dn: Annotated[
+        Optional[str], typer.Option("--ldap-base-dn", help="LDAP base DN")
+    ] = None,
+    ldap_group_cn: Annotated[
+        Optional[str], typer.Option("--ldap-group-cn", help="LDAP group CN")
+    ] = None,
+    ldap_object_class: Annotated[
+        Optional[str], typer.Option("--ldap-object-class", help="LDAP object class")
+    ] = None,
+    ldap_search_attribute: Annotated[
+        Optional[str],
+        typer.Option("--ldap-search-attribute", help="LDAP search attribute"),
+    ] = None,
 ) -> None:
 
     if debug:
