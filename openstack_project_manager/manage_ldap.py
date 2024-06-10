@@ -15,8 +15,23 @@ from typing import Optional
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
 
+def get_settings(domain_name: str):
+    # NOTE: This toxdir thing is super hacky, but works that way for us for now.
+    toxdir = Path(__file__).parents[1]
+    settings = Dynaconf(
+        envvar_prefix="OPM",
+        root_path=toxdir,
+        settings_files=["settings.toml"],
+        environments=True,
+        env=domain_name,
+    )
+    return settings
+
+
 def run(
-    debug: Annotated[bool, typer.Option("--debug", help="Debug mode")] = False,
+    debug: Annotated[
+        bool, typer.Option("--debug/--nodebug", help="Debug mode")
+    ] = False,
     cloud_name: Annotated[
         str, typer.Option("--cloud", help="Cloud name in clouds.yml")
     ] = "admin",
@@ -65,15 +80,7 @@ def run(
 
     # read configuration
 
-    # NOTE: This toxdir thing is super hacky, but works that way for us for now.
-    toxdir = Path(__file__).parents[1]
-    settings = Dynaconf(
-        envvar_prefix="OPM",
-        root_path=toxdir,
-        settings_files=["settings.toml"],
-        environments=True,
-        env=domain_name,
-    )
+    settings = get_settings(domain_name)
 
     # set ldap parameters
 
@@ -112,26 +119,31 @@ def run(
         CACHE_ROLES[role.name] = role
 
     for a, b in result:
-        if a == f"{ldap_admin_group_cn},{ldap_base_dn}":
-            for x in b[ldap_search_attribute]:
-                username = x.decode("utf-8")
 
-                logger.debug(f"Checking user {username}")
-                user = os_cloud.identity.find_user(username, domain_id=domain.id)
+        if a != f"{ldap_admin_group_cn},{ldap_base_dn}":
+            continue
 
-                if user:
-                    for project in os_cloud.identity.projects(domain_id=domain.id):
-                        logger.info(
-                            f"{project.name} - ensure admin project permissions for user = {username}, user_id = {user.id}"
+        for x in b[ldap_search_attribute]:
+            username = x.decode("utf-8")
+
+            logger.debug(f"Checking user {username}")
+            user = os_cloud.identity.find_user(username, domain_id=domain.id)
+
+            if not user:
+                continue
+
+            for project in os_cloud.identity.projects(domain_id=domain.id):
+                logger.info(
+                    f"{project.name} - ensure admin project permissions for user = {username}, user_id = {user.id}"
+                )
+                for role_name in DEFAULT_ROLES:
+                    try:
+                        role = CACHE_ROLES[role_name]
+                        os_cloud.identity.assign_project_role_to_user(
+                            project.id, user.id, role.id
                         )
-                        for role_name in DEFAULT_ROLES:
-                            try:
-                                role = CACHE_ROLES[role_name]
-                                os_cloud.identity.assign_project_role_to_user(
-                                    project.id, user.id, role.id
-                                )
-                            except:
-                                pass
+                    except:
+                        pass
 
     conn.unbind_s()
 
