@@ -16,6 +16,19 @@ from typing import Optional
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
 
+def get_settings(domain_name: str):
+    # NOTE: This toxdir thing is super hacky, but works that way for us for now.
+    toxdir = Path(__file__).parents[1]
+    settings = Dynaconf(
+        envvar_prefix="OPM",
+        root_path=toxdir,
+        settings_files=["settings.toml"],
+        environments=True,
+        env=domain_name,
+    )
+    return settings
+
+
 def run(
     debug: Annotated[
         bool, typer.Option("--debug/--nodebug", help="Debug mode")
@@ -67,16 +80,8 @@ def run(
     logger.add(sys.stderr, format=log_fmt, level=level, colorize=True)
 
     # read configuration
-
-    # NOTE: This toxdir thing is super hacky, but works that way for us for now.
     toxdir = Path(__file__).parents[1]
-    settings = Dynaconf(
-        envvar_prefix="OPM",
-        root_path=toxdir,
-        settings_files=["settings.toml"],
-        environments=True,
-        env=domain_name,
-    )
+    settings = get_settings(domain_name)
 
     # set ldap parameters
 
@@ -169,33 +174,44 @@ def run(
         CACHE_ROLES[role.name] = role
 
     for a, b in result:
-        if a == f"{ldap_group_cn},{ldap_base_dn}":
-            for x in b[ldap_search_attribute]:
-                username = x.decode("utf-8")
 
-                logger.debug(f"Checking user {username}")
-                user = os_cloud.identity.find_user(username, domain_id=domain.id)
+        if a != f"{ldap_group_cn},{ldap_base_dn}":
+            continue
 
-                if user:
-                    project = os_cloud.identity.find_project(
-                        f"{domain.name}-{username}", domain_id=domain.id
+        for x in b[ldap_search_attribute]:
+            username = x.decode("utf-8")
+
+            logger.debug(f"Checking user {username}")
+            user = os_cloud.identity.find_user(username, domain_id=domain.id)
+
+            if not user:
+                continue
+
+            project = os_cloud.identity.find_project(
+                f"{domain.name}-{username}", domain_id=domain.id
+            )
+
+            if project:
+                continue
+
+            # User does exist, but project does not exist
+
+            command = f"tox -c {toxdir}/tox.ini -e create -- {' '.join(params)} --name={user.name}"
+            result = subprocess.check_output(command, shell=True)
+
+            # ensure that the user is assigned to the new project
+            project = os_cloud.identity.find_project(
+                f"{domain.name}-{username}", domain_id=domain.id
+            )
+
+            for role_name in DEFAULT_ROLES:
+                try:
+                    role = CACHE_ROLES[role_name]
+                    os_cloud.identity.assign_project_role_to_user(
+                        project.id, user.id, role.id
                     )
-                    if not project:
-                        command = f"tox -c {toxdir}/tox.ini -e create -- {' '.join(params)} --name={user.name}"
-                        result = subprocess.check_output(command, shell=True)
-
-                        # ensure that the user is assigned to the new project
-                        project = os_cloud.identity.find_project(
-                            f"{domain.name}-{username}", domain_id=domain.id
-                        )
-                        for role_name in DEFAULT_ROLES:
-                            try:
-                                role = CACHE_ROLES[role_name]
-                                os_cloud.identity.assign_project_role_to_user(
-                                    project.id, user.id, role.id
-                                )
-                            except:
-                                pass
+                except:
+                    pass
 
     conn.unbind_s()
 
