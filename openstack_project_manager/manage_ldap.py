@@ -15,8 +15,23 @@ from typing import Optional
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
 
+def get_settings(domain_name: str):
+    # NOTE: This toxdir thing is super hacky, but works that way for us for now.
+    toxdir = Path(__file__).parents[1]
+    settings = Dynaconf(
+        envvar_prefix="OPM",
+        root_path=toxdir,
+        settings_files=["settings.toml"],
+        environments=True,
+        env=domain_name,
+    )
+    return settings
+
+
 def run(
-    debug: Annotated[bool, typer.Option("--debug", help="Debug mode")] = False,
+    debug: Annotated[
+        bool, typer.Option("--debug/--nodebug", help="Debug mode")
+    ] = False,
     cloud_name: Annotated[
         str, typer.Option("--cloud", help="Cloud name in clouds.yml")
     ] = "admin",
@@ -65,15 +80,7 @@ def run(
 
     # read configuration
 
-    # NOTE: This toxdir thing is super hacky, but works that way for us for now.
-    toxdir = Path(__file__).parents[1]
-    settings = Dynaconf(
-        envvar_prefix="OPM",
-        root_path=toxdir,
-        settings_files=["settings.toml"],
-        environments=True,
-        env=domain_name,
-    )
+    settings = get_settings(domain_name)
 
     # set ldap parameters
 
