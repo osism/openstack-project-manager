@@ -34,6 +34,18 @@ def generate_password(password_length: int) -> str:
     )
 
 
+def try_assign_role(
+    os_cloud: openstack.connection.Connection,
+    project: openstack.identity.v3.project.Project,
+    user: openstack.identity.v3.user.User,
+    role: openstack.identity.v3.role.Role,
+) -> None:
+    try:
+        os_cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
+    except:
+        pass
+
+
 def run(
     assign_admin_user: Annotated[
         bool,
@@ -260,13 +272,7 @@ def run(
                 os_cloud.update_user(user, password=password)
 
             for role_name in DEFAULT_ROLES:
-                try:
-                    role = CACHE_ROLES[role_name]
-                    os_cloud.identity.assign_project_role_to_user(
-                        project.id, user.id, role.id
-                    )
-                except:
-                    pass
+                try_assign_role(os_cloud, project, user, CACHE_ROLES[role_name])
 
     # Assign the domain admin user to the project
     admin_password = None
@@ -289,23 +295,15 @@ def run(
                 )
 
                 if domain_created:
-                    try:
-                        role = CACHE_ROLES["domain-manager"]
-                        os_cloud.identity.assign_domain_role_to_user(
-                            domain.id, admin_user.id, role.id
-                        )
-                    except:
-                        pass
+                    try_assign_role(
+                        os_cloud, project, admin_user, CACHE_ROLES["domain-manager"]
+                    )
 
             if admin_user and not create_domain:
                 for role_name in DEFAULT_ADMIN_ROLES:
-                    try:
-                        role = CACHE_ROLES[role_name]
-                        os_cloud.identity.assign_project_role_to_user(
-                            project.id, admin_user.id, role.id
-                        )
-                    except:
-                        pass
+                    try_assign_role(
+                        os_cloud, project, admin_user, CACHE_ROLES[role_name]
+                    )
 
     result = [
         ["domain", domain_name, domain.id],
