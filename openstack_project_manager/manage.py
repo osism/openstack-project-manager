@@ -96,7 +96,7 @@ class Configuration:
         self.CACHE_ADMIN_USERS: dict = {}
 
 
-def get_quotaclass(classes: str, quotaclass: str):
+def get_quotaclass(classes: str, quotaclass: str) -> Optional[dict]:
     with open(classes, "r") as fp:
         quotaclasses = yaml.load(fp, Loader=yaml.SafeLoader)
 
@@ -139,6 +139,10 @@ def check_quota(
         else:
             quotaclass = get_quotaclass(classes, "basic")
 
+    if quotaclass is None:
+        logger.error(f"{classes} - does not contain the requested quotaclass")
+        return
+
     logger.info(f"{project.name} - quotaclass {quotaclass}")
 
     if "quotamultiplier" in project:
@@ -171,10 +175,8 @@ def check_quota(
         ):
             quota_router = quota_router + 1
 
-        if (
-            "domain_name" != "default"
-            and check_bool(project, "has_service_network")
-            and not check_bool(project, "is_service_project")
+        if check_bool(project, "has_service_network") and not check_bool(
+            project, "is_service_project"
         ):
             quota_router = quota_router + 1
 
@@ -421,7 +423,7 @@ def create_network_resources(
                 availability_zone,
             )
 
-    if "domain_name" != "default" and check_bool(project, "has_service_network"):
+    if domain_name != "default" and check_bool(project, "has_service_network"):
         logger.info(f"{project.name} - check service network resources")
 
         if "service_network" in project:
