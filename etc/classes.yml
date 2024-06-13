@@ -80,8 +80,8 @@ images:
 service:
   parent: default
   compute:
-    cores: 256
-    instances: 256
+    cores: -1
+    instances: -1
     key_pairs: 256
     ram: 262144
     server_group_members: 256
@@ -89,7 +89,7 @@ service:
   network:
     floatingip: 256
     network: 256
-    port: 256
+    port: -1
     rbac_policy: 1024
     router: 256
     security_group: 256
