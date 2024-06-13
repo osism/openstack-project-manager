@@ -96,7 +96,7 @@ class Configuration:
         self.CACHE_ADMIN_USERS: dict = {}
 
 
-def get_quotaclass(classes: str, quotaclass: str):
+def get_quotaclass(classes: str, quotaclass: str) -> Optional[dict]:
     with open(classes, "r") as fp:
         quotaclasses = yaml.load(fp, Loader=yaml.SafeLoader)
 
@@ -139,6 +139,10 @@ def check_quota(
         else:
             quotaclass = get_quotaclass(classes, "basic")
 
+    if quotaclass is None:
+        logger.error(f"{classes} - does not contain the requested quotaclass")
+        return
+
     logger.info(f"{project.name} - quotaclass {quotaclass}")
 
     if "quotamultiplier" in project:
@@ -171,10 +175,8 @@ def check_quota(
         ):
             quota_router = quota_router + 1
 
-        if (
-            "domain_name" != "default"
-            and check_bool(project, "has_service_network")
-            and not check_bool(project, "is_service_project")
+        if check_bool(project, "has_service_network") and not check_bool(
+            project, "is_service_project"
         ):
             quota_router = quota_router + 1
 
@@ -289,7 +291,7 @@ def manage_external_network_rbacs(
     if (
         check_bool(project, "has_public_network")
         or check_bool(project, "show_public_network")
-        or "public_network" in quotaclass
+        or (quotaclass and "public_network" in quotaclass)
     ):
         if "public_network" in project:
             public_net_name = project.public_network
@@ -345,7 +347,7 @@ def check_volume_types(
         else:
             quotaclass = get_quotaclass(classes, "basic")
 
-    if "volume_types" in quotaclass:
+    if quotaclass and "volume_types" in quotaclass:
         for item in quotaclass["volume_types"]:
             logger.info(f"{project.name} - add volume type {item}")
             volume_types = [
@@ -359,15 +361,18 @@ def check_volume_types(
                 logger.error(
                     f"{project.name} - volume type {item} not unique, please use volume type ID"
                 )
-            elif len(volume_types) == 0:
+                continue
+
+            if len(volume_types) == 0:
                 logger.error(f"{project.name} - volume type {item} not found")
-            else:
-                try:
-                    configuration.os_cloud.block_storage.add_type_access(
-                        volume_types[0], project.id
-                    )
-                except openstack.exceptions.ConflictException:
-                    pass
+                continue
+
+            try:
+                configuration.os_cloud.block_storage.add_type_access(
+                    volume_types[0], project.id
+                )
+            except openstack.exceptions.ConflictException:
+                pass
 
 
 def create_network_resources(
@@ -421,7 +426,7 @@ def create_network_resources(
                 availability_zone,
             )
 
-    if "domain_name" != "default" and check_bool(project, "has_service_network"):
+    if domain_name != "default" and check_bool(project, "has_service_network"):
         logger.info(f"{project.name} - check service network resources")
 
         if "service_network" in project:
@@ -638,7 +643,7 @@ def create_service_network(
     net_name: str,
     subnet_name: str,
     availability_zone: str,
-    subnet_cidr=None,
+    subnet_cidr: Optional[str] = None,
 ) -> None:
 
     domain = configuration.os_cloud.get_domain(name_or_id=project.domain_id)
@@ -666,6 +671,7 @@ def create_service_network(
     subnet = configuration.os_cloud.get_subnet(
         subnet_name, filters={"project_id": project_service.id}
     )
+
     if not subnet:
         logger.info(f"{project.name} - create service subnet ({subnet_name})")
 
@@ -694,7 +700,7 @@ def create_network(
     net_name: str,
     subnet_name: str,
     availability_zone: str,
-) -> Tuple:
+) -> Tuple[bool, openstack.network.v2.subnet.Subnet]:
 
     attach = False
     net = configuration.os_cloud.get_network(
@@ -714,6 +720,7 @@ def create_network(
     subnet = configuration.os_cloud.get_subnet(
         subnet_name, filters={"project_id": project.id}
     )
+
     if not subnet:
         logger.info(f"{project.name} - create subnet ({subnet_name})")
 
@@ -780,12 +787,12 @@ def check_homeproject_permissions(
     if "homeproject" in project and not check_bool(project, "homeproject"):
         return
 
-    username = project.name[len(domain) :]
+    username = project.name[len(domain.name) + 1 :]
     user = configuration.os_cloud.identity.find_user(username, domain_id=domain.id)
 
     # try username without the -XXX postfix
     if not user:
-        username = re.sub(r"(.*)-[^.]*$", "\\1", project.name[len(domain) :])
+        username = re.sub(r"(.*)-[^.]*$", "\\1", project.name[len(domain.name) + 1 :])
         user = configuration.os_cloud.identity.find_user(username, domain_id=domain.id)
 
     # looks like there is no matching user for this project, nothing to do
@@ -858,18 +865,21 @@ def check_endpoints(
         for interface in ["internal", "public"]:
             endpoint_group_name = f"{endpoint}-{interface}"
 
-            if endpoint_group_name not in assigned_endpoint_groups:
-                if not configuration.dry_run:
-                    try:
-                        endpoint_group = existing_endpoint_groups[endpoint_group_name]
-                        configuration.os_keystone.endpoint_filter.add_endpoint_group_to_project(
-                            endpoint_group=endpoint_group.id, project=project.id
-                        )
-                        logger.info(
-                            f"{project.name} - add endpoint {endpoint} ({interface})"
-                        )
-                    except KeyError:
-                        pass
+            if endpoint_group_name in assigned_endpoint_groups:
+                # Already assigned
+                continue
+
+            if configuration.dry_run:
+                continue
+
+            try:
+                endpoint_group = existing_endpoint_groups[endpoint_group_name]
+                configuration.os_keystone.endpoint_filter.add_endpoint_group_to_project(
+                    endpoint_group=endpoint_group.id, project=project.id
+                )
+                logger.info(f"{project.name} - add endpoint {endpoint} ({interface})")
+            except KeyError:
+                pass
 
 
 def share_image_with_project(
@@ -880,14 +890,14 @@ def share_image_with_project(
 
     member = configuration.os_cloud.image.find_member(project.id, image.id)
 
-    if not member:
-        logger.info(f"{project.name} - add shared image '{image.name}'")
-        member = configuration.os_cloud.image.add_member(image.id, member_id=project.id)
+    if member:
+        return
 
-        if member.status != "accepted":
-            configuration.os_cloud.image.update_member(
-                member, image.id, status="accepted"
-            )
+    logger.info(f"{project.name} - add shared image '{image.name}'")
+    member = configuration.os_cloud.image.add_member(image.id, member_id=project.id)
+
+    if member.status != "accepted":
+        configuration.os_cloud.image.update_member(member, image.id, status="accepted")
 
 
 def share_images(
@@ -901,14 +911,16 @@ def share_images(
         name_or_id=f"{domain.name}-images"
     )
 
-    if project_images:
-        # only images owned by the images project can be shared
-        images = configuration.os_cloud.image.images(
-            owner=project_images.id, visibility="shared"
-        )
+    if not project_images:
+        return
 
-        for image in images:
-            share_image_with_project(configuration, image, project)
+    # only images owned by the images project can be shared
+    images = configuration.os_cloud.image.images(
+        owner=project_images.id, visibility="shared"
+    )
+
+    for image in images:
+        share_image_with_project(configuration, image, project)
 
 
 def cache_images(
@@ -945,6 +957,7 @@ def cache_images(
     volumes: List[openstack.block_storage.v2.volume.Volume] = (
         cloud_domain_admin.volume.volumes(owner=project_images.id)
     )
+
     for volume in volumes:
         image = cloud_domain_admin.image.find_image(name_or_id=volume.name[6:])
         if not image:
@@ -1026,6 +1039,25 @@ def process_project(
         check_volume_types(configuration, project, domain, classes)
 
 
+def handle_unmanaged_project(
+    configuration: Configuration,
+    project: openstack.identity.v3.project.Project,
+    classes: str,
+) -> None:
+    # the service project must always be able to access the public network.
+    if project.name == "service":
+        if "public_network" in project:
+            public_net_name = project.public_network
+        else:
+            public_net_name = "public"
+        add_external_network(configuration, project, public_net_name)
+
+    # On the service and admin project, the quota is always managed as well.
+    check_quota(configuration, project, classes)
+
+    logger.warning(f"project {project.name} in the default domain is not managed")
+
+
 def run(
     assign_admin_user: Annotated[
         bool,
@@ -1081,20 +1113,7 @@ def run(
             sys.exit(1)
 
         if project.domain_id == "default" and project_name in UNMANAGED_PROJECTS:
-            # the service project must always be able to access the public network.
-            if project_name == "service":
-                if "public_network" in project:
-                    public_net_name = project.public_network
-                else:
-                    public_net_name = "public"
-                add_external_network(configuration, project, public_net_name)
-
-            # On the service and admin project, the quota is always managed as well.
-            check_quota(configuration, project, classes)
-
-            logger.warning(
-                f"project {project_name} in the default domain is not managed"
-            )
+            handle_unmanaged_project(configuration, project, classes)
             sys.exit(0)
 
         domain = configuration.os_cloud.get_domain(name_or_id=project.domain_id)
@@ -1119,20 +1138,7 @@ def run(
                 name_or_id=project_name, domain_id=domain.id
             )
 
-            # the service project must always be able to access the public network.
-            if project_name == "service":
-                if "public_network" in project:
-                    public_net_name = project.public_network
-                else:
-                    public_net_name = "public"
-                add_external_network(configuration, project, public_net_name)
-
-            # On the service and admin project, the quota is always managed as well.
-            check_quota(configuration, project, classes)
-
-            logger.warning(
-                f"project {project_name} in the default domain is not managed"
-            )
+            handle_unmanaged_project(configuration, project, classes)
             sys.exit(0)
 
         logger.info(f"{domain.name} - domain_id = {domain.id}")
@@ -1165,20 +1171,7 @@ def run(
         for project in configuration.os_cloud.list_projects(domain_id=domain.id):
             logger.info(f"{project.name} - project_id = {project.id}")
             if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
-                # the service project must always be able to access the public network.
-                if project.name == "service":
-                    if "public_network" in project:
-                        public_net_name = project.public_network
-                    else:
-                        public_net_name = "public"
-                    add_external_network(configuration, project, public_net_name)
-
-                # On the service and admin project, the quota is always managed as well.
-                check_quota(configuration, project, classes)
-
-                logger.warning(
-                    f"project {project.name} in the default domain is not managed"
-                )
+                handle_unmanaged_project(configuration, project, classes)
             else:
                 process_project(
                     configuration,
@@ -1203,19 +1196,7 @@ def run(
                     project.domain_id == "default"
                     and project.name in UNMANAGED_PROJECTS
                 ):
-                    # the service project must always be able to access the public network.
-                    if project.name == "service":
-                        if "public_network" in project:
-                            public_net_name = project.public_network
-                        else:
-                            public_net_name = "public"
-                        add_external_network(configuration, project, public_net_name)
-                    logger.warning(
-                        f"project {project.name} in the default domain is not managed"
-                    )
-
-                    # On the service and admin project, the quota is always managed as well.
-                    check_quota(configuration, project, classes)
+                    handle_unmanaged_project(configuration, project, classes)
                 else:
                     process_project(
                         configuration,
