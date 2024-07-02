@@ -2,3 +2,5 @@
 clouds.yml
 secure.yml
 settings.toml
+
+__pycache__
