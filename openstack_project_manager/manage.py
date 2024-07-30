@@ -375,6 +375,41 @@ def check_volume_types(
                 pass
 
 
+def manage_private_volumetypes(
+    configuration: Configuration,
+    project: openstack.identity.v3.project.Project,
+    domain: openstack.identity.v3.domain.Domain,
+) -> None:
+    admin_project = configuration.os_cloud.get_project(
+        name_or_id="admin", domain_id="default"
+    )
+
+    if not admin_project or project.id == admin_project.id:
+        return
+
+    all_volume_types = list(configuration.os_cloud.block_storage.types(is_public=False))
+
+    for volume_type_name in all_volume_types:
+        if not volume_type_name.startswith(f"{domain.name}-"):
+            continue
+
+        volume_type = configuration.os_cloud.block_storage.get_type(volume_type_name)
+        projects_with_access = [
+            x["project_id"]
+            for x in configuration.os_cloud.block_storage.get_type_access(volume_type)
+        ]
+
+        if admin_project.id not in projects_with_access:
+            # Only admin projects are applicable
+            continue
+
+        if project.id in projects_with_access:
+            # Already applied to this project
+            continue
+
+        configuration.os_cloud.block_storage.add_type_access(volume_type, project.id)
+
+
 def create_network_resources(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
@@ -991,6 +1026,7 @@ def process_project(
     classes: str,
     manage_endpoints: bool,
     manage_homeprojects: bool,
+    manage_privatevolumetypes: bool,
 ) -> None:
 
     logger.info(
@@ -1038,6 +1074,9 @@ def process_project(
 
         check_volume_types(configuration, project, domain, classes)
 
+        if manage_privatevolumetypes:
+            manage_private_volumetypes(configuration, project, domain)
+
 
 def handle_unmanaged_project(
     configuration: Configuration,
@@ -1080,6 +1119,13 @@ def run(
             "--manage-homeprojects/--nomanage-homeprojects", help="Manage home projects"
         ),
     ] = False,
+    manage_privatevolumetypes: Annotated[
+        bool,
+        typer.Option(
+            "--manage-privatevolumetypes/--nomanage-privatevolumetypes",
+            help="Manage private volume types",
+        ),
+    ] = True,
     admin_domain: Annotated[
         str, typer.Option("--admin-domain", help="Admin domain")
     ] = "default",
@@ -1125,6 +1171,7 @@ def run(
             classes,
             manage_endpoints,
             manage_homeprojects,
+            manage_privatevolumetypes,
         )
 
     elif project_name and domain_name:
@@ -1158,6 +1205,7 @@ def run(
             classes,
             manage_endpoints,
             manage_homeprojects,
+            manage_privatevolumetypes,
         )
 
     elif not project_name and domain_name:
@@ -1179,6 +1227,7 @@ def run(
                     classes,
                     manage_endpoints,
                     manage_homeprojects,
+                    manage_privatevolumetypes,
                 )
 
         cache_images(configuration, domain)
@@ -1204,6 +1253,7 @@ def run(
                         classes,
                         manage_endpoints,
                         manage_homeprojects,
+                        manage_privatevolumetypes,
                     )
 
             cache_images(configuration, domain)
