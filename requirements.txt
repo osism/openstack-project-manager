@@ -1,4 +1,4 @@
-PyYAML==6.0.1
+PyYAML==6.0.2
 deepmerge==1.1.1
 dynaconf==3.2.6
 loguru==0.7.2
