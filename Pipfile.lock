@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "21a0e79ba1dd598865158f5c9c1afe83ec0795217c1dc53494553c8628297380"
+            "sha256": "2734046f939fef32483faca588392296924806f7e8fd0ddde11721e64b80ec0a"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -551,11 +551,11 @@
         },
         "oslo.serialization": {
             "hashes": [
-                "sha256:315cb3465e99c685cb091b90365cb701bee7140e204ba3e5fc2d8a20b4ec6e76",
-                "sha256:f999b75f2c2904c2f6aae5efbb67ab668cc0e79470510b721937626b36427220"
+                "sha256:9e752fc5d8a975956728dd96a82186783b3fefcacbb3553acd933058861e15a6",
+                "sha256:cd2297c2006be104298843c4d176fb659eba0c6b618a3e3760d650dc771a6df5"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==5.4.0"
+            "version": "==5.5.0"
         },
         "oslo.utils": {
             "hashes": [
@@ -591,11 +591,11 @@
         },
         "prettytable": {
             "hashes": [
-                "sha256:1cbfdeb4bcc73976a778a0fb33cb6d752e75396f16574dcb3e2d6332fd93c76a",
-                "sha256:29ec6c34260191d42cd4928c28d56adec360ac2b1208a26c7e4f14b90cc8bc84"
+                "sha256:7e23ca1e68bbfd06ba8de98bf553bf3493264c96d5e8a615c0471025deeba722",
+                "sha256:aa17083feb6c71da11a68b2c213b04675c4af4ce9c541762632ca3f2cb3546dd"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==3.10.2"
+            "version": "==3.11.0"
         },
         "pyasn1": {
             "hashes": [
@@ -802,12 +802,12 @@
         },
         "typer": {
             "hashes": [
-                "sha256:070d7ca53f785acbccba8e7d28b08dcd88f79f1fbda035ade0aecec71ca5c914",
-                "sha256:49e73131481d804288ef62598d97a1ceef3058905aa536a1134f90891ba35482"
+                "sha256:819aa03699f438397e876aa12b0d63766864ecba1b579092cc9fe35d886e34b6",
+                "sha256:c9c1613ed6a166162705b3347b8d10b661ccc5d95692654d0fb628118f2c34e6"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.7'",
-            "version": "==0.12.3"
+            "version": "==0.12.4"
         },
         "typing-extensions": {
             "hashes": [
