@@ -14,6 +14,7 @@ from openstack_project_manager.manage import (
     check_quota,
     manage_external_network_rbacs,
     check_volume_types,
+    manage_private_volumetypes,
     create_network_resources,
     add_service_network,
     del_service_network,
@@ -348,26 +349,35 @@ class TestCheckVolumeTypes(TestBase):
         self.mock_project = MagicMock()
         self.mock_project.id = 1234
 
+        self.mock_domain = MagicMock()
+        self.mock_domain.id = 5678
+        self.mock_domain.name = "CoMpAnY"
+
+    def mock_volume_type(self, name, location):
+        vt = MagicMock()
+        vt.name = name
+        vt.location.project.id = location
+        return vt
+
     def test_check_volume_types_0(self):
         self.mock_project.__contains__.return_value = True
+        vt = self.mock_volume_type("volume_type", 1234)
 
-        self.config.os_cloud.block_storage.types.return_value = ["volume_type"]
+        self.config.os_cloud.block_storage.types.return_value = [vt]
 
         check_volume_types(self.config, self.mock_project, MagicMock(), "classes.yaml")
 
         self.config.os_cloud.block_storage.types.assert_called_once_with(
             name="item1", is_public="False"
         )
-        self.config.os_cloud.block_storage.add_type_access.assert_called_with(
-            "volume_type", 1234
-        )
+        self.config.os_cloud.block_storage.add_type_access.assert_called_with(vt, 1234)
 
     def test_check_volume_types_1(self):
         self.mock_project.__contains__.return_value = False
 
         self.config.os_cloud.block_storage.types.return_value = [
-            "volume_type",
-            "volume_type_2",
+            self.mock_volume_type("volume_type", 1234),
+            self.mock_volume_type("volume_type_2", 1234),
         ]
         check_volume_types(self.config, self.mock_project, MagicMock(), "classes.yaml")
         self.config.os_cloud.block_storage.add_type_access.assert_not_called()
@@ -375,6 +385,59 @@ class TestCheckVolumeTypes(TestBase):
         self.config.os_cloud.block_storage.types.return_value = []
         check_volume_types(self.config, self.mock_project, MagicMock(), "classes.yaml")
         self.config.os_cloud.block_storage.add_type_access.assert_not_called()
+
+    def test_manage_private_volumetypes_0(self):
+        mock_admin_project = MagicMock()
+        mock_admin_project.id = 7890
+        self.config.os_cloud.get_project.return_value = mock_admin_project
+
+        vt = self.mock_volume_type("COMPANY-private-volume-type", 7890)
+
+        self.config.os_cloud.block_storage.types.return_value = [
+            self.mock_volume_type("volume_type_1", 7890),
+            vt,
+            self.mock_volume_type("COMPANY-do-not-use", 5678),
+            self.mock_volume_type("company-already-using", 7890),
+            self.mock_volume_type("volume_type_2", 1234),
+        ]
+
+        self.config.os_cloud.block_storage.get_type.side_effect = lambda t: t
+
+        def mock_get_type_access(volume_type):
+            accessIds = []
+            if volume_type.name in [
+                "COMPANY-private-volume-type",
+                "company-already-using",
+                "volume_type_1",
+            ]:
+                accessIds.append(7890)
+            if volume_type.name in ["company-already-using"]:
+                accessIds.append(1234)
+
+            ret = []
+            for i in accessIds:
+                ret.append({"project_id": i, "volume_type_id": i + 1000})
+
+            return ret
+
+        self.config.os_cloud.block_storage.get_type_access.side_effect = (
+            mock_get_type_access
+        )
+
+        manage_private_volumetypes(self.config, self.mock_project, self.mock_domain)
+
+        self.config.os_cloud.block_storage.add_type_access.assert_called_once_with(
+            vt, 1234
+        )
+
+    def test_manage_private_volumetypes_1(self):
+        mock_admin_project = MagicMock()
+        mock_admin_project.id = 7890
+        self.config.os_cloud.get_project.return_value = mock_admin_project
+
+        manage_private_volumetypes(self.config, mock_admin_project, self.mock_domain)
+
+        self.config.os_cloud.block_storage.types.assert_not_called()
 
 
 class TestCreateNetworkResources(TestBase):
@@ -988,6 +1051,7 @@ class TestProcessProject(TestBase):
         self.mock_domain = MagicMock()
         self.config.os_cloud.get_domain.return_value = self.mock_domain
 
+    @patch("openstack_project_manager.manage.manage_private_volumetypes")
     @patch("openstack_project_manager.manage.check_volume_types")
     @patch("openstack_project_manager.manage.create_network_resources")
     @patch("openstack_project_manager.manage.share_images")
@@ -1006,8 +1070,11 @@ class TestProcessProject(TestBase):
         mock_share_images,
         mock_create_network_resources,
         mock_check_volume_types,
+        mock_manage_private_volumetypes,
     ):
-        process_project(self.config, self.mock_project, "classes.yaml", True, True)
+        process_project(
+            self.config, self.mock_project, "classes.yaml", True, True, True
+        )
 
         mock_check_quota.assert_called_once_with(
             self.config, self.mock_project, "classes.yaml"
@@ -1027,7 +1094,11 @@ class TestProcessProject(TestBase):
         mock_check_volume_types.assert_called_once_with(
             self.config, self.mock_project, self.mock_domain, "classes.yaml"
         )
+        mock_manage_private_volumetypes.assert_called_once_with(
+            self.config, self.mock_project, self.mock_domain
+        )
 
+    @patch("openstack_project_manager.manage.manage_private_volumetypes")
     @patch("openstack_project_manager.manage.check_volume_types")
     @patch("openstack_project_manager.manage.create_network_resources")
     @patch("openstack_project_manager.manage.share_images")
@@ -1046,6 +1117,7 @@ class TestProcessProject(TestBase):
         mock_share_images,
         mock_create_network_resources,
         mock_check_volume_types,
+        mock_manage_private_volumetypes,
     ):
         self.config.assign_admin_user = False
 
@@ -1056,7 +1128,9 @@ class TestProcessProject(TestBase):
         self.mock_project.__contains__.side_effect = mock_contains
         self.mock_project.get.return_value = "True"
 
-        process_project(self.config, self.mock_project, "classes.yaml", False, False)
+        process_project(
+            self.config, self.mock_project, "classes.yaml", False, False, False
+        )
 
         mock_check_quota.assert_called_once_with(
             self.config, self.mock_project, "classes.yaml"
@@ -1076,7 +1150,9 @@ class TestProcessProject(TestBase):
         mock_check_volume_types.assert_called_once_with(
             self.config, self.mock_project, self.mock_domain, "classes.yaml"
         )
+        mock_manage_private_volumetypes.assert_not_called()
 
+    @patch("openstack_project_manager.manage.manage_private_volumetypes")
     @patch("openstack_project_manager.manage.check_volume_types")
     @patch("openstack_project_manager.manage.create_network_resources")
     @patch("openstack_project_manager.manage.share_images")
@@ -1095,6 +1171,7 @@ class TestProcessProject(TestBase):
         mock_share_images,
         mock_create_network_resources,
         mock_check_volume_types,
+        mock_manage_private_volumetypes,
     ):
         def mock_contains(name):
             return name == "unmanaged"
@@ -1103,7 +1180,9 @@ class TestProcessProject(TestBase):
         self.mock_project.__contains__.side_effect = mock_contains
         self.mock_project.get.return_value = "True"
 
-        process_project(self.config, self.mock_project, "classes.yaml", True, True)
+        process_project(
+            self.config, self.mock_project, "classes.yaml", True, True, True
+        )
 
         mock_check_quota.assert_not_called()
         mock_check_endpoints.assert_not_called()
@@ -1113,6 +1192,7 @@ class TestProcessProject(TestBase):
         mock_share_images.assert_not_called()
         mock_create_network_resources.assert_not_called()
         mock_check_volume_types.assert_not_called()
+        mock_manage_private_volumetypes.assert_not_called()
 
     @patch("openstack_project_manager.manage.check_quota")
     @patch("openstack_project_manager.manage.add_external_network")
@@ -1207,7 +1287,7 @@ class TestCLI(CloudTest):
     def assume_project_1(self, assume_cache_images):
         self.mock_handle_unmanaged_project.assert_not_called()
         self.mock_process_project.assert_called_once_with(
-            ANY, self.mock_project1, ANY, False, False
+            ANY, self.mock_project1, ANY, False, False, True
         )
         if not assume_cache_images:
             self.mock_cache_images.assert_not_called()
@@ -1242,7 +1322,7 @@ class TestCLI(CloudTest):
             ANY, self.mock_project2, ANY
         )
         self.mock_process_project.assert_called_once_with(
-            ANY, self.mock_project1, ANY, False, False
+            ANY, self.mock_project1, ANY, False, False, True
         )
         self.mock_cache_images.assert_any_call(ANY, self.mock_domain1)
         self.mock_cache_images.assert_any_call(ANY, self.mock_domain2)
@@ -1306,13 +1386,14 @@ class TestCLI(CloudTest):
                 "--domain=domain_2",
                 "--manage-endpoints",
                 "--manage-homeprojects",
+                "--nomanage-privatevolumetypes",
                 "--classes=other.yaml",
             ],
         )
         self.assertEqual(result.exit_code, 0, (result, result.stdout))
 
         self.mock_process_project.assert_called_once_with(
-            ANY, self.mock_project1, "other.yaml", True, True
+            ANY, self.mock_project1, "other.yaml", True, True, False
         )
 
     def test_cli_9(self):
