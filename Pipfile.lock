@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2734046f939fef32483faca588392296924806f7e8fd0ddde11721e64b80ec0a"
+            "sha256": "895f0b99399934ffc8a652b150b579dfb664fcfd18a50f91383f6be76556b3c6"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -309,11 +309,11 @@
         },
         "idna": {
             "hashes": [
-                "sha256:028ff3aadf0609c1fd278d8ea3089299412a7a8b9bd005dd08b9f8285bcb5cfc",
-                "sha256:82fee1fc78add43492d3a1898bfa6d8a904cc97d8427f683ed8e798d07761aa0"
+                "sha256:050b4e5baadcd44d760cedbd2b8e639f2ff89bbc7a5730fcc662954303377aac",
+                "sha256:d838c2c0ed6fced7693d5e8ab8e734d5f8fda53a039c0164afb0b82e771e3603"
             ],
-            "markers": "python_version >= '3.5'",
-            "version": "==3.7"
+            "markers": "python_version >= '3.6'",
+            "version": "==3.8"
         },
         "iso8601": {
             "hashes": [
@@ -519,35 +519,35 @@
         },
         "oslo.config": {
             "hashes": [
-                "sha256:aa500044886b6c55f76577cb5a93492a4596c5f9283376760ea7852cc49c99a3",
-                "sha256:f5e9a6848c35a1c8975677d623ffcf31bbb7177d14cb8f43505b2a4c679dcdd0"
+                "sha256:7bcd6c3d9dbdd6e4d49a9a6dc3d10ae96073ebe3175280031adc0cbc76500967",
+                "sha256:9f05ef70e48d9a61a8d0c9bed389da24f2ef5a89df5b6e8deb7c741d6113667e"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==9.5.0"
+            "version": "==9.6.0"
         },
         "oslo.context": {
             "hashes": [
-                "sha256:aa858a42aac9858bf259bc0804513a8f9bf36916f9cfc8937708f6c90ad68259",
-                "sha256:eae0317b29928f1934df4c60b860fe8625247cb297c5cc62fef8eb5827b12fac"
+                "sha256:51bfab0a3915dcea3823612fdd0737e839d33c8551168ae8e1bcfdd07ba60985",
+                "sha256:5222c32636be070a230df9d3141a0b27a95f0a3b6978f4c1485bcada47a4c3cb"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==5.5.0"
+            "version": "==5.6.0"
         },
         "oslo.i18n": {
             "hashes": [
-                "sha256:64a251edef8bf1bb1d4e6f78d377e149d4f15c1a9245de77f172016da6267444",
-                "sha256:698eb5c63a01359ed6d91031d6331098190d38be0bdda7d270264d6f86bc79e7"
+                "sha256:5417778ba3b1920b70b99859d730ac9bf37f18050dc28af890c66345ba855bc0",
+                "sha256:66e04c041e9ff17d07e13ec7f48295fbc36169143c72ca2352a3efcc98e7b608"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==6.3.0"
+            "version": "==6.4.0"
         },
         "oslo.log": {
             "hashes": [
-                "sha256:e35a12cfe4cad13ffb0aeda99fcca20a705d0f694a84c2ef7b07b45960f88fb4",
-                "sha256:f7f162ab03dc3f0728d8abee2806677146a2704aa22d4b3d7a9e4d1c1c68a26e"
+                "sha256:8e6f47800a40271a7d6e40948a6717d76fadb28ef54d27b93a3a587aed2f8981",
+                "sha256:f768047df9d706c484dd6665dcbbea289021d48cb7ce5abf7a1f69a09491f5fe"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==6.1.1"
+            "version": "==6.1.2"
         },
         "oslo.serialization": {
             "hashes": [
@@ -559,11 +559,11 @@
         },
         "oslo.utils": {
             "hashes": [
-                "sha256:53ce2d88fd1e9035e6be18c53447353d3e92ea0473d88272f43dc334ea9295af",
-                "sha256:94f8053391a33502dab4d84465403262ca19ffd8cfd29a1a5ea3c8aa620ef610"
+                "sha256:59a5d3e4e7bbc78d801ccebc2b823e429b624c12bb6e3b6e76f71c29f2bf21df",
+                "sha256:a25c0a3270f71fcfa822a72c3f74bd61fe41e97240812986695cd32d4a171fb1"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==7.2.0"
+            "version": "==7.3.0"
         },
         "packaging": {
             "hashes": [
@@ -785,11 +785,11 @@
         },
         "stevedore": {
             "hashes": [
-                "sha256:1c15d95766ca0569cad14cb6272d4d31dae66b011a929d7c18219c176ea1b5c9",
-                "sha256:46b93ca40e1114cea93d738a6c1e365396981bb6bb78c27045b7587c9473544d"
+                "sha256:1efd34ca08f474dad08d9b19e934a22c68bb6fe416926479ba29e5013bcc8f78",
+                "sha256:9a64265f4060312828151c204efbe9b7a9852a0d9228756344dbc7e4023e375a"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==5.2.0"
+            "version": "==5.3.0"
         },
         "tabulate": {
             "hashes": [
@@ -802,12 +802,12 @@
         },
         "typer": {
             "hashes": [
-                "sha256:819aa03699f438397e876aa12b0d63766864ecba1b579092cc9fe35d886e34b6",
-                "sha256:c9c1613ed6a166162705b3347b8d10b661ccc5d95692654d0fb628118f2c34e6"
+                "sha256:62fe4e471711b147e3365034133904df3e235698399bc4de2b36c8579298d52b",
+                "sha256:f592f089bedcc8ec1b974125d64851029c3b1af145f04aca64d69410f0c9b722"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.7'",
-            "version": "==0.12.4"
+            "version": "==0.12.5"
         },
         "typing-extensions": {
             "hashes": [
