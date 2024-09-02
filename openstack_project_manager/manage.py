@@ -416,6 +416,46 @@ def manage_private_volumetypes(
         configuration.os_cloud.block_storage.add_type_access(volume_type, project.id)
 
 
+def manage_private_flavors(
+    configuration: Configuration,
+    project: openstack.identity.v3.project.Project,
+    domain: openstack.identity.v3.domain.Domain,
+) -> None:
+    admin_project = configuration.os_cloud.get_project(
+        name_or_id="admin", domain_id="default"
+    )
+
+    if not admin_project or project.id == admin_project.id:
+        return
+
+    logger.info(f"{project.name} - Applying private flavors for domain {domain.name}")
+
+    all_flavors = list(configuration.os_cloud.list_flavors())
+
+    for flavor in all_flavors:
+        if not flavor.name.upper().startswith(f"{domain.name.upper()}-"):
+            continue
+
+        if flavor.is_public:
+            continue
+
+        projects_with_access = [
+            x["tenant_id"] for x in configuration.os_cloud.list_flavor_access(flavor)
+        ]
+
+        if admin_project.id not in projects_with_access:
+            # Only admin projects are applicable
+            continue
+
+        if project.id in projects_with_access:
+            # Already applied to this project
+            logger.info(f"{project.name} - '{flavor.name}' is already applied")
+            continue
+
+        logger.info(f"{project.name} - Applying '{flavor.name}'")
+        configuration.os_cloud.add_flavor_access(flavor.id, project.id)
+
+
 def create_network_resources(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
@@ -1033,6 +1073,7 @@ def process_project(
     manage_endpoints: bool,
     manage_homeprojects: bool,
     manage_privatevolumetypes: bool,
+    manage_privateflavors: bool,
 ) -> None:
 
     logger.info(
@@ -1083,6 +1124,9 @@ def process_project(
         if manage_privatevolumetypes:
             manage_private_volumetypes(configuration, project, domain)
 
+        if manage_privateflavors:
+            manage_private_flavors(configuration, project, domain)
+
 
 def handle_unmanaged_project(
     configuration: Configuration,
@@ -1132,6 +1176,13 @@ def run(
             help="Manage private volume types",
         ),
     ] = True,
+    manage_privateflavors: Annotated[
+        bool,
+        typer.Option(
+            "--manage-privateflavors/--nomanage-privateflavors",
+            help="Manage private flavors",
+        ),
+    ] = True,
     admin_domain: Annotated[
         str, typer.Option("--admin-domain", help="Admin domain")
     ] = "default",
@@ -1178,6 +1229,7 @@ def run(
             manage_endpoints,
             manage_homeprojects,
             manage_privatevolumetypes,
+            manage_privateflavors,
         )
 
     elif project_name and domain_name:
@@ -1212,6 +1264,7 @@ def run(
             manage_endpoints,
             manage_homeprojects,
             manage_privatevolumetypes,
+            manage_privateflavors,
         )
 
     elif not project_name and domain_name:
@@ -1234,6 +1287,7 @@ def run(
                     manage_endpoints,
                     manage_homeprojects,
                     manage_privatevolumetypes,
+                    manage_privateflavors,
                 )
 
         cache_images(configuration, domain)
@@ -1260,6 +1314,7 @@ def run(
                         manage_endpoints,
                         manage_homeprojects,
                         manage_privatevolumetypes,
+                        manage_privateflavors,
                     )
 
             cache_images(configuration, domain)
