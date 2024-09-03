@@ -15,6 +15,7 @@ from openstack_project_manager.manage import (
     manage_external_network_rbacs,
     check_volume_types,
     manage_private_volumetypes,
+    check_flavors,
     manage_private_flavors,
     create_network_resources,
     add_service_network,
@@ -68,6 +69,11 @@ volume_test:
   volume_types:
     item1:
       name: name
+
+flavor_test:
+  parent: default
+  flavors:
+    - flavor_name
 """
 )
 
@@ -444,6 +450,7 @@ class TestCheckVolumeTypes(TestBase):
 class TestCheckPrivateFlavorTypes(TestBase):
 
     def setUp(self):
+        self.select_quota_class = "flavor_test"
         super().setUp()
 
         self.mock_project = MagicMock()
@@ -457,7 +464,32 @@ class TestCheckPrivateFlavorTypes(TestBase):
         f = MagicMock()
         f.name = name
         f.is_public = is_public
+        f.id = sum([ord(x) for x in f.name])
         return f
+
+    def test_check_flavors_0(self):
+        self.mock_project.__contains__.return_value = True
+        f = self.mock_flavor("flavor_name", False)
+
+        self.config.os_cloud.list_flavors.return_value = [f]
+
+        check_flavors(self.config, self.mock_project, MagicMock(), "classes.yaml")
+
+        self.config.os_cloud.add_flavor_access.assert_called_once_with(f.id, 1234)
+
+    def test_check_flavors_1(self):
+        self.mock_project.__contains__.return_value = False
+
+        self.config.os_cloud.list_flavors.return_value = [
+            self.mock_flavor("flavor", 1234),
+            self.mock_flavor("flavor_2", 1234),
+        ]
+        check_flavors(self.config, self.mock_project, MagicMock(), "classes.yaml")
+        self.config.os_cloud.add_flavor_access.assert_not_called()
+
+        self.config.os_cloud.list_flavors.return_value = []
+        check_volume_types(self.config, self.mock_project, MagicMock(), "classes.yaml")
+        self.config.os_cloud.add_flavor_access.assert_not_called()
 
     def test_manage_private_flavors_0(self):
         mock_admin_project = MagicMock()

@@ -416,6 +416,52 @@ def manage_private_volumetypes(
         configuration.os_cloud.block_storage.add_type_access(volume_type, project.id)
 
 
+def check_flavors(
+    configuration: Configuration,
+    project: openstack.identity.v3.project.Project,
+    domain: openstack.identity.v3.domain.Domain,
+    classes: str,
+) -> None:
+
+    if "quotaclass" in project:
+        quotaclass = get_quotaclass(classes, project.quotaclass)
+    else:
+        logger.warning(f"{project.name} - quotaclass not set --> use default")
+        if domain.name.startswith("ok"):
+            quotaclass = get_quotaclass(classes, "okeanos")
+        else:
+            quotaclass = get_quotaclass(classes, "basic")
+
+    if quotaclass and "flavors" in quotaclass:
+        for item in quotaclass["flavors"]:
+            logger.info(f"{project.name} - add flavor {item}")
+
+            all_flavors = list(configuration.os_cloud.list_flavors())
+            flavors = []
+
+            for f in all_flavors:
+                if f.is_public:
+                    continue
+
+                if f.name == item or f.id == item:
+                    flavors.append(f)
+
+            if len(flavors) > 1:
+                logger.error(
+                    f"{project.name} - flavor {item} not unique, please use flavor ID"
+                )
+                continue
+
+            if len(flavors) == 0:
+                logger.error(f"{project.name} - flavor {item} not found")
+                continue
+
+            try:
+                configuration.os_cloud.add_flavor_access(flavors[0].id, project.id)
+            except openstack.exceptions.ConflictException:
+                pass
+
+
 def manage_private_flavors(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
@@ -1123,6 +1169,8 @@ def process_project(
 
         if manage_privatevolumetypes:
             manage_private_volumetypes(configuration, project, domain)
+
+        check_flavors(configuration, project, domain, classes)
 
         if manage_privateflavors:
             manage_private_flavors(configuration, project, domain)
