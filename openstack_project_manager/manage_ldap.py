@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 from pathlib import Path
+import re
 import sys
 
 from dynaconf import Dynaconf
@@ -50,6 +51,10 @@ def run(
     ldap_base_dn: Annotated[
         Optional[str], typer.Option("--ldap-base-dn", help="LDAP base DN")
     ] = None,
+    ldap_project_group_prefix: Annotated[
+        Optional[str],
+        typer.Option("--ldap-project-group-prefix", help="LDAP project group prefix"),
+    ] = None,
     ldap_admin_group_cn: Annotated[
         Optional[str], typer.Option("--ldap-admin-group-cn", help="LDAP admin group CN")
     ] = None,
@@ -88,6 +93,9 @@ def run(
     ldap_admin_group_cn = ldap_admin_group_cn or settings.get(
         "ldap_admin_group_cn", None
     )
+    ldap_project_group_prefix = ldap_project_group_prefix or settings.get(
+        "ldap_project_group_prefix", None
+    )
     ldap_object_class = ldap_object_class or settings.get("ldap_object_class", None)
     ldap_password = ldap_password or settings.get("ldap_password", None)
     ldap_search_attribute = ldap_search_attribute or settings.get(
@@ -103,11 +111,6 @@ def run(
     conn = ldap.initialize(ldap_server)
     conn.simple_bind_s(ldap_username, ldap_password)
 
-    search_filter = f"(&(objectClass={ldap_object_class})({ldap_admin_group_cn}))"
-    result = conn.search_s(
-        ldap_base_dn, ldap.SCOPE_SUBTREE, search_filter, [ldap_search_attribute]
-    )
-
     # check openstack projects
 
     os_cloud = openstack.connect(cloud=cloud_name)
@@ -117,6 +120,51 @@ def run(
     CACHE_ROLES = {}
     for role in os_cloud.identity.roles():
         CACHE_ROLES[role.name] = role
+
+    # handle project groups
+    search_filter = (
+        f"(&(objectClass={ldap_object_class})(cn={ldap_project_group_prefix}*))"
+    )
+    result = conn.search_s(
+        ldap_base_dn, ldap.SCOPE_SUBTREE, search_filter, [ldap_search_attribute]
+    )
+
+    for a, b in result:
+        m = re.search(rf"cn={ldap_project_group_prefix}(\w+),", a)
+        if m:
+            project = os_cloud.identity.find_project(
+                f"{domain.name}-{m.group(1)}", domain_id=domain.id
+            )
+            if not project:
+                logger.warning(f"Create project {domain.name}-{m.group(1)} first")
+            else:
+                for x in b[ldap_search_attribute]:
+                    username = x.decode("utf-8")
+
+                    logger.debug(f"Checking user {username}")
+                    user = os_cloud.identity.find_user(username, domain_id=domain.id)
+
+                    if not user:
+                        logger.warning(f"User {username} not found")
+                        continue
+
+                    logger.info(
+                        f"{project.name} - ensure project permissions for user = {username}, user_id = {user.id}"
+                    )
+                    for role_name in DEFAULT_ROLES:
+                        try:
+                            role = CACHE_ROLES[role_name]
+                            os_cloud.identity.assign_project_role_to_user(
+                                project.id, user.id, role.id
+                            )
+                        except:
+                            pass
+
+    # handle the admin group
+    search_filter = f"(&(objectClass={ldap_object_class})({ldap_admin_group_cn}))"
+    result = conn.search_s(
+        ldap_base_dn, ldap.SCOPE_SUBTREE, search_filter, [ldap_search_attribute]
+    )
 
     for a, b in result:
 
@@ -130,6 +178,7 @@ def run(
             user = os_cloud.identity.find_user(username, domain_id=domain.id)
 
             if not user:
+                logger.warning(f"User {username} not found")
                 continue
 
             for project in os_cloud.identity.projects(domain_id=domain.id):
