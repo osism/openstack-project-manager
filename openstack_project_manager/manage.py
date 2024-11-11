@@ -388,7 +388,7 @@ def manage_private_volumetypes(
         return
 
     logger.info(
-        f"{project.name} - Applying private volume types for domain {domain.name}"
+        f"{project.name} - Managing private volume types for domain {domain.name}"
     )
 
     all_volume_types = list(configuration.os_cloud.block_storage.types(is_public=False))
@@ -399,7 +399,6 @@ def manage_private_volumetypes(
 
         location = volume_type.location.project.id
         if location != admin_project.id:
-            # Only admin projects are applicable
             continue
 
         projects_with_access = [
@@ -408,11 +407,12 @@ def manage_private_volumetypes(
         ]
 
         if project.id in projects_with_access:
-            # Already applied to this project
-            logger.info(f"{project.name} - '{volume_type.name}' is already applied")
+            logger.debug(
+                f"{project.name} - volume type {volume_type.name} is already assigned"
+            )
             continue
 
-        logger.info(f"{project.name} - Applying '{volume_type.name}'")
+        logger.info(f"{project.name} - Adding volume type {volume_type.name}")
         configuration.os_cloud.block_storage.add_type_access(volume_type, project.id)
 
 
@@ -467,14 +467,7 @@ def manage_private_flavors(
     project: openstack.identity.v3.project.Project,
     domain: openstack.identity.v3.domain.Domain,
 ) -> None:
-    admin_project = configuration.os_cloud.get_project(
-        name_or_id="admin", domain_id="default"
-    )
-
-    if not admin_project or project.id == admin_project.id:
-        return
-
-    logger.info(f"{project.name} - Applying private flavors for domain {domain.name}")
+    logger.info(f"{project.name} - Managing private flavors for domain {domain.name}")
 
     all_flavors = list(configuration.os_cloud.list_flavors())
 
@@ -489,16 +482,11 @@ def manage_private_flavors(
             x["tenant_id"] for x in configuration.os_cloud.list_flavor_access(flavor)
         ]
 
-        if admin_project.id not in projects_with_access:
-            # Only admin projects are applicable
-            continue
-
         if project.id in projects_with_access:
-            # Already applied to this project
-            logger.info(f"{project.name} - '{flavor.name}' is already applied")
+            logger.debug(f"{project.name} - flavor {flavor.name} is already assigned")
             continue
 
-        logger.info(f"{project.name} - Applying '{flavor.name}'")
+        logger.info(f"{project.name} - Adding flavor {flavor.name}")
         configuration.os_cloud.add_flavor_access(flavor.id, project.id)
 
 
