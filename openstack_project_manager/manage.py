@@ -215,6 +215,8 @@ def check_quota(
                     project.id, **{key: quota_should_be}
                 )
 
+    check_bandwidth_limit(configuration, project, quotaclass)
+
     logger.info(f"{project.name} - check compute quota")
     quotacompute = configuration.os_cloud.get_compute_quotas(project.id)
     for key in quotaclass["compute"]:
@@ -268,6 +270,111 @@ def check_quota(
                 configuration.os_cloud.set_volume_quotas(
                     project.id, **{key: quota_should_be}
                 )
+
+
+def update_bandwidth_policy_rule(
+    configuration: Configuration,
+    project: openstack.identity.v3.project.Project,
+    policy: openstack.network.v2.qos_policy.QoSPolicy,
+    direction: str,
+    max_kbps: int,
+    max_burst_kbps: int,
+):
+    existingRules = configuration.os_cloud.list_qos_bandwidth_limit_rules(
+        policy.id, {"direction": direction}
+    )
+    existingRule = existingRules[0] if len(existingRules) > 0 else None
+
+    if max_kbps == -1 and max_burst_kbps == -1:
+        if existingRule:
+            logger.info(f"{project.name} - removing {direction} bandwidth limit rule")
+            configuration.os_cloud.delete_qos_bandwidth_limit_rule(
+                policy.id, existingRule.id
+            )
+        return
+
+    if not existingRule:
+        logger.info(f"{project.name} - creating new {direction} bandwidth limit rule")
+        configuration.os_cloud.create_qos_bandwidth_limit_rule(
+            policy.id,
+            max_kbps=max_kbps,
+            max_burst_kbps=max_burst_kbps,
+            direction=direction,
+        )
+    elif (
+        existingRule.max_kbps != max_kbps
+        or existingRule.max_burst_kbps != max_burst_kbps
+    ):
+        logger.info(f"{project.name} - updating {direction} bandwidth limit rule")
+        configuration.os_cloud.update_qos_bandwidth_limit_rule(
+            policy.id,
+            existingRule.id,
+            max_kbps=max_kbps,
+            max_burst_kbps=max_burst_kbps,
+        )
+
+
+def check_bandwidth_limit(
+    configuration: Configuration,
+    project: openstack.identity.v3.project.Project,
+    quotaclass: dict,
+) -> None:
+
+    domain = configuration.os_cloud.get_domain(name_or_id=project.domain_id)
+    domain_name = domain.name.lower()
+
+    if domain_name == "default" and project.name in ["admin", "service"]:
+        logger.info(f"{project.name} - skip network bandwith limit policy check")
+        return
+
+    logger.info(f"{project.name} - check network bandwith limit policy")
+
+    limit_egress = -1
+    limit_egress_burst = -1
+    limit_ingress = -1
+    limit_ingress_burst = -1
+
+    if "bandwidth" in quotaclass:
+        if "egress" in quotaclass["bandwidth"]:
+            limit_egress = int(quotaclass["bandwidth"]["egress"])
+        if "egress_burst" in quotaclass["bandwidth"]:
+            limit_egress_burst = int(quotaclass["bandwidth"]["egress_burst"])
+        if "ingress" in quotaclass["bandwidth"]:
+            limit_ingress = int(quotaclass["bandwidth"]["ingress"])
+        if "ingress_burst" in quotaclass["bandwidth"]:
+            limit_ingress_burst = int(quotaclass["bandwidth"]["ingress_burst"])
+
+    existingPolicies = configuration.os_cloud.list_qos_policies(
+        {"name": "bw-limiter", "project_id": project.id}
+    )
+
+    if (
+        limit_egress == -1
+        and limit_egress_burst == -1
+        and limit_ingress == -1
+        and limit_ingress_burst == -1
+    ):
+        # There are no limits defined (anymore) so we remove or skip the policy entirely
+        if len(existingPolicies) > 0:
+            logger.info(f"{project.name} - removing bandwidth limit policy")
+            for policy in existingPolicies:
+                configuration.os_cloud.delete_qos_policy(policy.id)
+        return
+
+    if len(existingPolicies) == 0:
+        logger.info(f"{project.name} - creating new bandwidth limit policy")
+        policy = configuration.os_cloud.create_qos_policy(
+            name="bw-limiter", default=True, project_id=project.id
+        )
+    else:
+        policy = existingPolicies[0]
+
+    update_bandwidth_policy_rule(
+        configuration, project, policy, "egress", limit_egress, limit_egress_burst
+    )
+    update_bandwidth_policy_rule(
+        configuration, project, policy, "ingress", limit_ingress, limit_ingress_burst
+    )
 
 
 def manage_external_network_rbacs(
