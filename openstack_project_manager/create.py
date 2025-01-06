@@ -159,7 +159,7 @@ def run(
     # Generate a random name in the form abcd-0123
     if use_random:
         part1 = "".join(random.choice(string.ascii_letters) for x in range(4)).lower()
-        part2 = f"{random.randint(0,9999):04d}"
+        part2 = f"{random.randint(0, 9999):04d}"
         name = f"{part1}-{part2}"
 
     # Add the domain name as a prefix to the name
