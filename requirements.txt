@@ -1,6 +1,6 @@
 PyYAML==6.0.2
 deepmerge==2.0
-dynaconf==3.2.6
+dynaconf==3.2.7
 loguru==0.7.3
 openstacksdk==4.2.0
 os-client-config==2.1.0
