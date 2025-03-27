@@ -1095,9 +1095,12 @@ def cache_images(
             if volume_size < image.min_disk:
                 volume_size = image.min_disk
 
-            cloud_domain_admin.volume.create_volume(
-                name=volume_name, size=volume_size, imageRef=image.id
-            )
+            try:
+                cloud_domain_admin.volume.create_volume(
+                    name=volume_name, size=volume_size, imageRef=image.id
+                )
+            except openstack.exceptions.HttpException as e:
+                logger.error(f"{domain.name} - {e.message}")
 
 
 def process_project(
