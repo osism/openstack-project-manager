@@ -150,7 +150,7 @@ def check_quota(
         logger.error(f"{classes} - does not contain the requested quotaclass")
         return
 
-    logger.info(f"{project.name} - quotaclass {quotaclass_name}")
+    logger.info(f"{project.name} - quotaclass = {quotaclass_name}")
 
     if "quotamultiplier" in project:
         multiplier = int(project.quotamultiplier)
