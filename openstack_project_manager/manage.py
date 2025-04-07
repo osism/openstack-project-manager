@@ -395,7 +395,7 @@ def manage_private_volumetypes(
         return
 
     logger.info(
-        f"{project.name} - Managing private volume types for domain {domain.name}"
+        f"{project.name} - managing private volume types for domain {domain.name}"
     )
 
     all_volume_types = list(configuration.os_cloud.block_storage.types(is_public=False))
@@ -474,7 +474,7 @@ def manage_private_flavors(
     project: openstack.identity.v3.project.Project,
     domain: openstack.identity.v3.domain.Domain,
 ) -> None:
-    logger.info(f"{project.name} - Managing private flavors for domain {domain.name}")
+    logger.info(f"{project.name} - managing private flavors for domain {domain.name}")
 
     all_flavors = list(configuration.os_cloud.list_flavors())
 
@@ -1190,7 +1190,9 @@ def handle_unmanaged_project(
     # On the service and admin project, the quota is always managed as well.
     check_quota(configuration, project, classes)
 
-    logger.warning(f"project {project.name} in the default domain is not managed")
+    logger.warning(
+        f"project {project.name} ({project.id}) in the default domain is not managed"
+    )
 
 
 def run(
@@ -1322,7 +1324,6 @@ def run(
         logger.info(f"{domain.name} - domain_id = {domain.id}")
 
         for project in configuration.os_cloud.list_projects(domain_id=domain.id):
-            logger.info(f"{project.name} - project_id = {project.id}")
             if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
                 handle_unmanaged_project(configuration, project, classes)
             else:
