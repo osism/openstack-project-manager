@@ -15,6 +15,7 @@ from typing import Optional
 
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
+DEFAULT_MANAGER_ROLE = "manager"
 
 # Default roles to be assigned to a admin user for a project
 DEFAULT_ADMIN_ROLES = [
@@ -294,9 +295,9 @@ def run(
                     name=admin_name, password=admin_password, domain_id=admin_domain_id
                 )
 
-                if domain_created:
+                if domain_created and DEFAULT_MANAGER_ROLE in CACHE_ROLES:
                     try_assign_role(
-                        os_cloud, project, admin_user, CACHE_ROLES["domain-manager"]
+                        os_cloud, project, admin_user, CACHE_ROLES[DEFAULT_MANAGER_ROLE]
                     )
 
             if admin_user and not create_domain:
