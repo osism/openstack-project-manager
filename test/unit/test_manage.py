@@ -12,8 +12,10 @@ from openstack_project_manager.manage import (
     get_quotaclass,
     check_bool,
     check_quota,
+    update_bandwidth_policy_rule,
     manage_external_network_rbacs,
     check_volume_types,
+    check_bandwidth_limit,
     manage_private_volumetypes,
     check_flavors,
     manage_private_flavors,
@@ -294,6 +296,157 @@ class TestCheckQuota(TestBase):
         self.mock_os_cloud.set_volume_quotas.assert_any_call(ANY, backup_gigabytes=3)
         self.mock_os_cloud.set_volume_quotas.assert_any_call(ANY, backups=3)
         self.mock_os_cloud.set_volume_quotas.assert_any_call(ANY, gigabytes=3)
+
+
+class TestCheckBandwidth(TestBase):
+    def setUp(self):
+        super().setUp()
+
+        self.mock_project = MagicMock()
+        self.mock_project.name = "test"
+        self.mock_project.id = 9012
+        self.mock_domain = MagicMock()
+        self.mock_domain.name = "test"
+        self.config.os_cloud.get_domain.return_value = self.mock_domain
+
+    def test_update_bandwidth_policy_rule_0(self):
+        mock_policy = MagicMock()
+        mock_policy.id = 5678
+        self.config.os_cloud.list_qos_bandwidth_limit_rules.return_value = []
+
+        update_bandwidth_policy_rule(
+            self.config, self.mock_project, mock_policy, "egress", -1, -1
+        )
+
+        self.config.os_cloud.delete_qos_bandwidth_limit_rule.assert_not_called()
+        self.config.os_cloud.create_qos_bandwidth_limit_rule.assert_not_called()
+        self.config.os_cloud.update_qos_bandwidth_limit_rule.assert_not_called()
+
+    def test_update_bandwidth_policy_rule_1(self):
+        mock_policy = MagicMock()
+        mock_policy.id = 5678
+        mock_rule = MagicMock()
+        mock_rule.id = 1234
+        self.config.os_cloud.list_qos_bandwidth_limit_rules.return_value = [mock_rule]
+
+        update_bandwidth_policy_rule(
+            self.config, self.mock_project, mock_policy, "egress", -1, -1
+        )
+
+        self.config.os_cloud.delete_qos_bandwidth_limit_rule.assert_called_once_with(
+            5678, 1234
+        )
+        self.config.os_cloud.create_qos_bandwidth_limit_rule.assert_not_called()
+        self.config.os_cloud.update_qos_bandwidth_limit_rule.assert_not_called()
+
+    def test_update_bandwidth_policy_rule_2(self):
+        mock_policy = MagicMock()
+        mock_policy.id = 5678
+        self.config.os_cloud.list_qos_bandwidth_limit_rules.return_value = []
+
+        update_bandwidth_policy_rule(
+            self.config, self.mock_project, mock_policy, "egress", 100, 200
+        )
+
+        self.config.os_cloud.delete_qos_bandwidth_limit_rule.assert_not_called()
+        self.config.os_cloud.create_qos_bandwidth_limit_rule.assert_called_once_with(
+            5678, max_kbps=100, max_burst_kbps=200, direction="egress"
+        )
+        self.config.os_cloud.update_qos_bandwidth_limit_rule.assert_not_called()
+
+    def test_update_bandwidth_policy_rule_3(self):
+        mock_policy = MagicMock()
+        mock_policy.id = 5678
+        mock_rule = MagicMock()
+        mock_rule.id = 1234
+        self.config.os_cloud.list_qos_bandwidth_limit_rules.return_value = [mock_rule]
+
+        update_bandwidth_policy_rule(
+            self.config, self.mock_project, mock_policy, "egress", 300, 400
+        )
+
+        self.config.os_cloud.delete_qos_bandwidth_limit_rule.assert_not_called()
+        self.config.os_cloud.create_qos_bandwidth_limit_rule.assert_not_called()
+        self.config.os_cloud.update_qos_bandwidth_limit_rule.assert_called_once_with(
+            5678, 1234, max_kbps=300, max_burst_kbps=400
+        )
+
+    @patch("openstack_project_manager.manage.update_bandwidth_policy_rule")
+    def test_check_bandwidth_limit_0(self, mock_update_bandwidth_policy_rule):
+        mock_admin_project = MagicMock()
+        mock_admin_project.name = "admin"
+        mock_default_domain = MagicMock()
+        mock_default_domain.name = "Default"
+        self.config.os_cloud.get_domain.return_value = mock_default_domain
+
+        check_bandwidth_limit(self.config, mock_admin_project, {})
+
+        self.config.os_cloud.list_qos_policies.assert_not_called()
+        self.config.os_cloud.delete_qos_policy.assert_not_called()
+        self.config.os_cloud.create_qos_policy.assert_not_called()
+        mock_update_bandwidth_policy_rule.assert_not_called()
+
+    @patch("openstack_project_manager.manage.update_bandwidth_policy_rule")
+    def test_check_bandwidth_limit_1(self, mock_update_bandwidth_policy_rule):
+        mock_policy = MagicMock()
+        mock_policy.id = 5678
+        self.config.os_cloud.list_qos_policies.return_value = [mock_policy]
+        mock_quota_class = {}
+
+        check_bandwidth_limit(self.config, self.mock_project, mock_quota_class)
+
+        self.config.os_cloud.delete_qos_policy.assert_called_once_with(5678)
+        self.config.os_cloud.create_qos_policy.assert_not_called()
+        mock_update_bandwidth_policy_rule.assert_not_called()
+
+    @patch("openstack_project_manager.manage.update_bandwidth_policy_rule")
+    def test_check_bandwidth_limit_2(self, mock_update_bandwidth_policy_rule):
+        self.config.os_cloud.list_qos_policies.return_value = []
+        mock_quota_class = {}
+
+        check_bandwidth_limit(self.config, self.mock_project, mock_quota_class)
+
+        self.config.os_cloud.delete_qos_policy.assert_not_called()
+        self.config.os_cloud.create_qos_policy.assert_not_called()
+        mock_update_bandwidth_policy_rule.assert_not_called()
+
+    @patch("openstack_project_manager.manage.update_bandwidth_policy_rule")
+    def test_check_bandwidth_limit_3(self, mock_update_bandwidth_policy_rule):
+        self.config.os_cloud.list_qos_policies.return_value = []
+        mock_quota_class = {"bandwidth": {"egress": 1000}}
+
+        check_bandwidth_limit(self.config, self.mock_project, mock_quota_class)
+
+        self.config.os_cloud.delete_qos_policy.assert_not_called()
+        self.config.os_cloud.create_qos_policy.assert_called_once_with(
+            name="bw-limiter", default=True, project_id=9012
+        )
+        mock_update_bandwidth_policy_rule.assert_any_call(
+            self.config, self.mock_project, ANY, "egress", 1000, -1
+        )
+        mock_update_bandwidth_policy_rule.assert_any_call(
+            self.config, self.mock_project, ANY, "ingress", -1, -1
+        )
+
+    @patch("openstack_project_manager.manage.update_bandwidth_policy_rule")
+    def test_check_bandwidth_limit_4(self, mock_update_bandwidth_policy_rule):
+        mock_policy = MagicMock()
+        mock_policy.id = 5678
+        self.config.os_cloud.list_qos_policies.return_value = [mock_policy]
+        mock_quota_class = {
+            "bandwidth": {"egress_burst": 1000, "ingress": 2000, "ingress_burst": 3000}
+        }
+
+        check_bandwidth_limit(self.config, self.mock_project, mock_quota_class)
+
+        self.config.os_cloud.delete_qos_policy.assert_not_called()
+        self.config.os_cloud.create_qos_policy.assert_not_called()
+        mock_update_bandwidth_policy_rule.assert_any_call(
+            self.config, self.mock_project, mock_policy, "egress", -1, 1000
+        )
+        mock_update_bandwidth_policy_rule.assert_any_call(
+            self.config, self.mock_project, mock_policy, "ingress", 2000, 3000
+        )
 
 
 class TestManageExternalNetworkRbacs(TestBase):
