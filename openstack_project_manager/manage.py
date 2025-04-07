@@ -126,24 +126,31 @@ def check_quota(
     classes: str,
 ) -> None:
 
+    quotaclass_name = ""
+
     if project.name == "service":
-        quotaclass = get_quotaclass(classes, "service")
+        quotaclass_name = "service"
+        quotaclass = get_quotaclass(classes, quotaclass_name)
     elif project.name == "admin":
-        quotaclass = get_quotaclass(classes, "admin")
+        quotaclass_name = "admin"
+        quotaclass = get_quotaclass(classes, quotaclass_name)
     elif "quotaclass" in project:
-        quotaclass = get_quotaclass(classes, project.quotaclass)
+        quotaclass_name = project.quotaclass
+        quotaclass = get_quotaclass(classes, quotaclass_name)
     else:
         domain = configuration.os_cloud.get_domain(name_or_id=project.domain_id)
         if domain.name.startswith("ok"):
-            quotaclass = get_quotaclass(classes, "okeanos")
+            quotaclass_name = "okeanos"
+            quotaclass = get_quotaclass(classes, quotaclass_name)
         else:
-            quotaclass = get_quotaclass(classes, "basic")
+            quotaclass_name = "basic"
+            quotaclass = get_quotaclass(classes, quotaclass_name)
 
     if quotaclass is None:
         logger.error(f"{classes} - does not contain the requested quotaclass")
         return
 
-    logger.info(f"{project.name} - quotaclass {quotaclass}")
+    logger.info(f"{project.name} - quotaclass {quotaclass_name}")
 
     if "quotamultiplier" in project:
         multiplier = int(project.quotamultiplier)
