@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 PyYAML = "==6.0.3"
 deepmerge = "==2.0"
-dynaconf = "==3.2.11"
+dynaconf = "==3.2.12"
 loguru = "==0.7.3"
 openstacksdk = "==4.7.1"
 os-client-config = "==2.3.0"
