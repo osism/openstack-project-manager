@@ -1233,17 +1233,17 @@ def process_project(
 
     if "unmanaged" in project:
         logger.warning(f"{project.name} - not managed --> skipping")
+        return
+    elif "quotaclass" not in project:
+        logger.info(
+            f"{project.name} - no quotaclass set (not created by project manager) --> skipping"
+        )
+        return
     else:
         domain = configuration.os_cloud.get_domain(project.domain_id)
 
-        if "quotaclass" in project:
-            quotaclass = project.quotaclass
-        else:
-            logger.warning(f"{project.name} - quotaclass not set --> use default")
-            if domain.name.startswith("ok"):
-                quotaclass = get_quotaclass(classes, "okeanos")
-            else:
-                quotaclass = get_quotaclass(classes, "basic")
+        # At this point, quotaclass is guaranteed to exist due to early return above
+        quotaclass = project.quotaclass
 
         check_quota(configuration, project, classes)
 
@@ -1431,6 +1431,9 @@ def run(
         logger.info(f"{domain.name} - domain_id = {domain.id}")
 
         for project in configuration.os_cloud.list_projects(domain_id=domain.id):
+            if "quotaclass" not in project and project.domain_id != "default":
+                logger.info(f"{project.name} - skipping project without quotaclass")
+                continue
             if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
                 handle_unmanaged_project(configuration, project, classes)
             else:
@@ -1455,6 +1458,9 @@ def run(
 
             for project in configuration.os_cloud.list_projects(domain_id=domain.id):
                 logger.info(f"{project.name} - project_id = {project.id}")
+                if "quotaclass" not in project and project.domain_id != "default":
+                    logger.info(f"{project.name} - skipping project without quotaclass")
+                    continue
                 if (
                     project.domain_id == "default"
                     and project.name in UNMANAGED_PROJECTS

@@ -128,9 +128,25 @@ class TestCLI(unittest.TestCase):
             )
 
     def test_cli_2(self):
-        self.mock_os_cloud.identity.find_domain.return_value = None
+        # Set up a side_effect to handle multiple find_domain calls
+        # First call for regular domain returns None (domain doesn't exist)
+        # Second call for admin domain returns the mock (admin domain exists)
         mock_os_domain = MagicMock()
         mock_os_domain.id = 5678
+        mock_admin_domain = MagicMock()
+        mock_admin_domain.id = "admin-domain-id"
+        mock_admin_domain.name = "admin-domain"
+
+        def find_domain_side_effect(name):
+            if name == "default":
+                # After first call, domain is created, so return the created domain
+                return (
+                    mock_os_domain if self.mock_os_cloud.create_domain.called else None
+                )
+            else:  # admin domain
+                return mock_admin_domain
+
+        self.mock_os_cloud.identity.find_domain.side_effect = find_domain_side_effect
         self.mock_os_cloud.create_domain.return_value = mock_os_domain
 
         result = self.runner.invoke(app, [])

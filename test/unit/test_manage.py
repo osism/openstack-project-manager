@@ -111,6 +111,12 @@ class CloudTest(unittest.TestCase):
             self.os_roles.append(role)
         self.mock_os_cloud.identity.roles.return_value = self.os_roles
 
+        # Mock the admin domain to prevent error message
+        mock_admin_domain = MagicMock()
+        mock_admin_domain.id = "admin-domain-id"
+        mock_admin_domain.name = "admin-domain"
+        self.mock_os_cloud.identity.find_domain.return_value = mock_admin_domain
+
 
 class TestConfiguration(CloudTest):
 
@@ -126,6 +132,12 @@ class TestConfiguration(CloudTest):
         self.mock_yaml_load.return_value = ["a", "b", "c"]
 
     def test_configuration_0(self):
+        # Mock the admin domain to prevent error message
+        mock_admin_domain = MagicMock()
+        mock_admin_domain.id = "admin-domain-id"
+        mock_admin_domain.name = "admin-domain"
+        self.mock_os_cloud.identity.find_domain.return_value = mock_admin_domain
+
         config = Configuration(
             False, "cloud-name", "endpoints.yml", True, "admin-domain"
         )
@@ -139,6 +151,8 @@ class TestConfiguration(CloudTest):
         assert len(config.CACHE_ROLES) > 0
         assert config.assign_admin_user
         self.mock_os_cloud.identity.find_domain.assert_called_once_with("admin-domain")
+        # Verify the admin domain was cached
+        assert config.CACHE_ADMIN_DOMAIN is mock_admin_domain
 
     def test_configuration_1(self):
         config = Configuration(
@@ -216,6 +230,12 @@ class TestBase(CloudTest):
             "default": ["A", "B"],
             "orchestration": ["B", "C"],
         }
+
+        # Mock the admin domain to prevent error message
+        mock_admin_domain = MagicMock()
+        mock_admin_domain.id = "admin-domain-id"
+        mock_admin_domain.name = "admin-domain"
+        self.mock_os_cloud.identity.find_domain.return_value = mock_admin_domain
 
         self.config = Configuration(
             False, "cloud-name", "endpoints.yml", True, "admin-domain"
@@ -1298,7 +1318,9 @@ class TestProcessProject(TestBase):
         self.mock_project.name = "project_name"
         self.mock_project.domain_id = 5678
         self.mock_project.quotaclass = "default"
-        self.mock_project.__contains__.return_value = False
+        self.mock_project.__contains__ = MagicMock(
+            side_effect=lambda x: x == "quotaclass"
+        )
 
         self.mock_domain = MagicMock()
         self.config.os_cloud.get_domain.return_value = self.mock_domain
@@ -1490,7 +1512,9 @@ class TestProcessProject(TestBase):
     @patch("openstack_project_manager.manage.add_external_network")
     def test_handle_unmanaged_project_2(self, mock_add_external_network):
         self.mock_project.name = "service"
-        self.mock_project.__contains__.return_value = True
+        self.mock_project.__contains__ = MagicMock(
+            side_effect=lambda x: x in ["quotaclass", "public_network"]
+        )
         self.mock_project.public_network = "public_net_name"
 
         handle_unmanaged_project(self.config, self.mock_project, "classes.yaml")
@@ -1518,6 +1542,10 @@ class TestCLI(CloudTest):
         self.mock_project1.domain_id = "domain2"
         self.mock_project1.name = "project_1"
         self.mock_project1.id = 9012
+        self.mock_project1.quotaclass = "default"
+        self.mock_project1.__contains__ = MagicMock(
+            side_effect=lambda x: x == "quotaclass"
+        )
 
         self.mock_project2 = MagicMock()
         self.mock_project2.domain_id = "default"
