@@ -1430,6 +1430,10 @@ def run(
 
         logger.info(f"{domain.name} - domain_id = {domain.id}")
 
+        if domain.id == "default":
+            logger.info(f"{domain.name} - skipping default domain")
+            sys.exit(0)
+
         for project in configuration.os_cloud.list_projects(domain_id=domain.id):
             if project.domain_id == "default" and project.name in UNMANAGED_PROJECTS:
                 handle_unmanaged_project(configuration, project, classes)
@@ -1452,6 +1456,10 @@ def run(
 
         for domain in domains:
             logger.info(f"{domain.name} - domain_id = {domain.id}")
+
+            if domain.id == "default":
+                logger.info(f"{domain.name} - skipping default domain")
+                continue
 
             for project in configuration.os_cloud.list_projects(domain_id=domain.id):
                 logger.info(f"{project.name} - project_id = {project.id}")

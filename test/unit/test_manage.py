@@ -1507,8 +1507,8 @@ class TestCLI(CloudTest):
         self.runner = CliRunner()
 
         self.mock_domain1 = MagicMock()
-        self.mock_domain1.name = "domain_1"
-        self.mock_domain1.id = "default"
+        self.mock_domain1.name = "test"
+        self.mock_domain1.id = "test"
 
         self.mock_domain2 = MagicMock()
         self.mock_domain2.name = "domain_2"
@@ -1520,12 +1520,12 @@ class TestCLI(CloudTest):
         self.mock_project1.id = 9012
 
         self.mock_project2 = MagicMock()
-        self.mock_project2.domain_id = "default"
+        self.mock_project2.domain_id = "test"
         self.mock_project2.name = "service"
         self.mock_project2.id = 3456
 
         def mock_list_projects(domain_id=None):
-            if domain_id == "default":
+            if domain_id == "test":
                 return [self.mock_project2]
             elif domain_id == "domain2":
                 return [self.mock_project1]
