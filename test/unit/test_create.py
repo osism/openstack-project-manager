@@ -73,6 +73,22 @@ class TestCLI(unittest.TestCase):
         self.mock_os_keystone = MagicMock()
         self.mock_make_client.return_value = self.mock_os_keystone
 
+        # Mock for user connection (second openstack.connect call)
+        self.mock_user_cloud = MagicMock()
+        self.mock_app_cred = MagicMock()
+        self.mock_app_cred.id = "app-cred-id-123"
+        self.mock_app_cred.secret = "app-cred-secret-456"
+        self.mock_user_cloud.identity.create_application_credential.return_value = (
+            self.mock_app_cred
+        )
+
+        # Mock config for auth_url retrieval
+        self.mock_os_cloud.config.get_auth_args.return_value = {
+            "auth_url": "https://keystone.example.com:5000/v3"
+        }
+        self.mock_os_cloud.config.region_name = "RegionOne"
+        self.mock_os_cloud.config.get_interface.return_value = "public"
+
         self.runner = CliRunner()
 
     def test_cli_0(self):
@@ -356,6 +372,144 @@ class TestCLI(unittest.TestCase):
         self.mock_generate_password.assert_not_called()
         self.mock_os_cloud.update_user.assert_called_once_with(
             self.mock_os_user, password="otherpassword"
+        )
+
+    def test_cli_15(self):
+        """Test application credential creation with --create-user flag"""
+        # Setup: User doesn't exist, needs to be created
+        self.mock_os_cloud.identity.find_user.return_value = None
+        mock_os_user = MagicMock()
+        mock_os_user.id = "user-id-789"
+        self.mock_os_cloud.create_user.return_value = mock_os_user
+
+        # Setup: Second connect() call returns user connection
+        self.mock_connect.side_effect = [self.mock_os_cloud, self.mock_user_cloud]
+
+        result = self.runner.invoke(
+            app,
+            [
+                "--create-user",
+                "--create-application-credential",
+                "--noassign-admin-user",
+            ],
+        )
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify user was created
+        self.mock_os_cloud.create_user.assert_called_once()
+
+        # Verify second connection as user
+        self.assertEqual(self.mock_connect.call_count, 2)
+        user_connect_call = self.mock_connect.call_args_list[1]
+        user_config = user_connect_call[1]
+
+        # Verify user connection config
+        self.assertEqual(user_config["auth"]["username"], "default-sandbox")
+        self.assertEqual(user_config["auth"]["password"], "randompassword")
+        self.assertEqual(user_config["auth"]["project_name"], "default-sandbox")
+        self.assertEqual(user_config["auth"]["project_domain_name"], "default")
+        self.assertEqual(user_config["auth"]["user_domain_name"], "default")
+        self.assertEqual(
+            user_config["auth"]["auth_url"], "https://keystone.example.com:5000/v3"
+        )
+        self.assertEqual(user_config["region_name"], "RegionOne")
+        self.assertEqual(user_config["interface"], "public")
+
+        # Verify application credential was created
+        self.mock_user_cloud.identity.create_application_credential.assert_called_once_with(
+            user=mock_os_user.id, name="default-sandbox"
+        )
+
+        # Verify output contains application credential info
+        self.assertIn("application_credential_id", result.stdout)
+        self.assertIn("app-cred-id-123", result.stdout)
+        self.assertIn("application_credential_secret", result.stdout)
+        self.assertIn("app-cred-secret-456", result.stdout)
+
+    def test_cli_16(self):
+        """Test application credential flag without --create-user shows warning"""
+        with patch("openstack_project_manager.create.logger") as mock_logger:
+            result = self.runner.invoke(app, ["--create-application-credential"])
+            self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+            # Verify warning was logged
+            mock_logger.warning.assert_called_once_with(
+                "Application credential creation requires --create-user flag"
+            )
+
+            # Verify no application credential output
+            self.assertNotIn("application_credential_id", result.stdout)
+            self.assertNotIn("application_credential_secret", result.stdout)
+
+            # Verify only one connection (admin), no user connection
+            self.assertEqual(self.mock_connect.call_count, 1)
+
+    def test_cli_17(self):
+        """Test graceful error handling when application credential creation fails"""
+        # Setup: User needs to be created
+        self.mock_os_cloud.identity.find_user.return_value = None
+        mock_os_user = MagicMock()
+        mock_os_user.id = "user-id-789"
+        self.mock_os_cloud.create_user.return_value = mock_os_user
+
+        # Setup: User connection succeeds but app cred creation fails
+        self.mock_user_cloud.identity.create_application_credential.side_effect = (
+            Exception("API Error")
+        )
+        self.mock_connect.side_effect = [self.mock_os_cloud, self.mock_user_cloud]
+
+        with patch("openstack_project_manager.create.logger") as mock_logger:
+            result = self.runner.invoke(
+                app,
+                [
+                    "--create-user",
+                    "--create-application-credential",
+                    "--noassign-admin-user",
+                ],
+            )
+            self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+            # Verify error was logged
+            mock_logger.error.assert_called_once()
+            error_call_args = mock_logger.error.call_args[0][0]
+            self.assertIn("Failed to create application credential", error_call_args)
+
+            # Verify no application credential in output (graceful degradation)
+            self.assertNotIn("application_credential_id", result.stdout)
+            self.assertNotIn("application_credential_secret", result.stdout)
+
+    def test_cli_18(self):
+        """Test application credential with custom name and domain"""
+        # Setup
+        self.mock_os_cloud.identity.find_user.return_value = None
+        mock_os_user = MagicMock()
+        mock_os_user.id = "user-id-custom"
+        self.mock_os_cloud.create_user.return_value = mock_os_user
+        self.mock_connect.side_effect = [self.mock_os_cloud, self.mock_user_cloud]
+
+        result = self.runner.invoke(
+            app,
+            [
+                "--create-user",
+                "--create-application-credential",
+                "--name=myproject",
+                "--domain=mydomain",
+                "--noassign-admin-user",
+            ],
+        )
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify user connection uses custom values
+        user_connect_call = self.mock_connect.call_args_list[1]
+        user_config = user_connect_call[1]
+        self.assertEqual(user_config["auth"]["username"], "mydomain-myproject")
+        self.assertEqual(user_config["auth"]["project_name"], "mydomain-myproject")
+        self.assertEqual(user_config["auth"]["project_domain_name"], "mydomain")
+        self.assertEqual(user_config["auth"]["user_domain_name"], "mydomain")
+
+        # Verify application credential uses custom name
+        self.mock_user_cloud.identity.create_application_credential.assert_called_once_with(
+            user=mock_os_user.id, name="mydomain-myproject"
         )
 
 
