@@ -67,6 +67,13 @@ def run(
     create_user: Annotated[
         bool, typer.Option("--create-user/--nocreate-user", help="Create user")
     ] = False,
+    create_application_credential: Annotated[
+        bool,
+        typer.Option(
+            "--create-application-credential/--nocreate-application-credential",
+            help="Create application credential for user",
+        ),
+    ] = False,
     domain_name_prefix: Annotated[
         bool,
         typer.Option(
@@ -275,6 +282,46 @@ def run(
             for role_name in DEFAULT_ROLES:
                 try_assign_role(os_cloud, project, user, CACHE_ROLES[role_name])
 
+        # Create Application Credential for the user
+        app_cred = None
+        app_cred_secret = None
+
+        if create_application_credential and not create_user:
+            logger.warning(
+                "Application credential creation requires --create-user flag"
+            )
+
+        if create_user and create_application_credential:
+            # Create temporary connection as the newly created user
+            try:
+                # Build user connection configuration
+                user_cloud_config = {
+                    "auth": {
+                        "auth_url": os_cloud.config.get_auth_args()["auth_url"],
+                        "username": name,
+                        "password": password,
+                        "project_name": name,
+                        "project_domain_name": domain_name,
+                        "user_domain_name": domain_name,
+                    },
+                    "region_name": os_cloud.config.region_name,
+                    "interface": os_cloud.config.get_interface(),
+                }
+
+                # Create connection as the user
+                user_connection = openstack.connect(**user_cloud_config)
+
+                # Create Application Credential using user's connection
+                app_cred = user_connection.identity.create_application_credential(
+                    user=user.id,
+                    name=name,
+                )
+                app_cred_secret = app_cred.secret
+
+                logger.info(f"Application credential created for user {name}")
+            except Exception as e:
+                logger.error(f"Failed to create application credential: {e}")
+
     # Assign the domain admin user to the project
     admin_password = None
     admin_name = f"{domain_name}-admin"
@@ -322,6 +369,11 @@ def run(
     if create_user and not create_domain:
         result.append(["user", name, user.id])
         result.append(["password", password, ""])
+
+        # Outputs Application Credential details if created
+        if app_cred and app_cred_secret:
+            result.append(["application_credential_id", app_cred.id, ""])
+            result.append(["application_credential_secret", app_cred_secret, ""])
 
     print(tabulate(result, headers=["name", "value", "id"], tablefmt="psql"))
 
