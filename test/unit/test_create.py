@@ -54,6 +54,11 @@ class TestCLI(unittest.TestCase):
         self.mock_os_project.id = 9012
         self.mock_os_cloud.identity.find_project.return_value = self.mock_os_project
 
+        # Mock for group operations
+        self.mock_os_group = MagicMock()
+        self.mock_os_group.id = 7890
+        self.mock_os_cloud.identity.find_group.return_value = self.mock_os_group
+
         self.os_roles = []
         for rolename in ["member", "load-balancer_member"]:
             role = MagicMock()
@@ -511,6 +516,409 @@ class TestCLI(unittest.TestCase):
         self.mock_user_cloud.identity.create_application_credential.assert_called_once_with(
             user=mock_os_user.id, name="mydomain-myproject"
         )
+
+    def test_cli_19(self):
+        """Test group is created and roles assigned when project is created"""
+        # Setup: Project doesn't exist, needs to be created
+        self.mock_os_cloud.identity.find_project.return_value = None
+        mock_os_project = MagicMock()
+        mock_os_project.id = 1111
+        self.mock_os_cloud.create_project.return_value = mock_os_project
+
+        # Setup: Group doesn't exist, needs to be created
+        self.mock_os_cloud.identity.find_group.return_value = None
+        mock_os_group = MagicMock()
+        mock_os_group.id = 2222
+        self.mock_os_cloud.create_group.return_value = mock_os_group
+
+        result = self.runner.invoke(app, [])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify group was created with correct name, description, and domain
+        self.mock_os_cloud.create_group.assert_called_once_with(
+            name="default-sandbox",
+            description="Group for project default-sandbox",
+            domain=1234,
+        )
+
+        # Verify roles were assigned to the group for the project
+        for role in self.os_roles:
+            self.mock_os_cloud.identity.assign_project_role_to_group.assert_any_call(
+                mock_os_project.id, mock_os_group.id, role.id
+            )
+
+    def test_cli_20(self):
+        """Test existing group is used when found"""
+        # Setup: Project doesn't exist, needs to be created
+        self.mock_os_cloud.identity.find_project.return_value = None
+        mock_os_project = MagicMock()
+        mock_os_project.id = 1111
+        self.mock_os_cloud.create_project.return_value = mock_os_project
+
+        # Setup: Group already exists
+        mock_os_group = MagicMock()
+        mock_os_group.id = 3333
+        self.mock_os_cloud.identity.find_group.return_value = mock_os_group
+
+        result = self.runner.invoke(app, [])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify find_group was called for the project group
+        self.mock_os_cloud.identity.find_group.assert_any_call(
+            "default-sandbox", domain_id=1234
+        )
+
+        # Verify group was NOT created (already exists)
+        self.mock_os_cloud.create_group.assert_not_called()
+
+        # Verify roles were assigned to the existing group
+        for role in self.os_roles:
+            self.mock_os_cloud.identity.assign_project_role_to_group.assert_any_call(
+                mock_os_project.id, mock_os_group.id, role.id
+            )
+
+    def test_cli_21(self):
+        """Test group operations occur when project already exists"""
+        # Setup: Project already exists
+        mock_os_project = MagicMock()
+        mock_os_project.id = 9012
+        self.mock_os_cloud.identity.find_project.return_value = mock_os_project
+
+        # Setup: Group doesn't exist
+        self.mock_os_cloud.identity.find_group.return_value = None
+        mock_os_group = MagicMock()
+        mock_os_group.id = 4444
+        self.mock_os_cloud.create_group.return_value = mock_os_group
+
+        result = self.runner.invoke(app, [])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify find_group was called for the project group
+        self.mock_os_cloud.identity.find_group.assert_any_call(
+            "default-sandbox", domain_id=1234
+        )
+
+        # Verify group was created
+        self.mock_os_cloud.create_group.assert_called_once_with(
+            name="default-sandbox",
+            description="Group for project default-sandbox",
+            domain=1234,
+        )
+
+        # Verify roles were assigned to the group
+        for role in self.os_roles:
+            self.mock_os_cloud.identity.assign_project_role_to_group.assert_any_call(
+                mock_os_project.id, mock_os_group.id, role.id
+            )
+
+    def test_cli_22(self):
+        """Test no group operations when only creating domain"""
+        result = self.runner.invoke(app, ["--create-domain"])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify no group operations occurred
+        self.mock_os_cloud.identity.find_group.assert_not_called()
+        self.mock_os_cloud.create_group.assert_not_called()
+        self.mock_os_cloud.identity.assign_project_role_to_group.assert_not_called()
+
+    def test_cli_23(self):
+        """Test group creation with custom domain and name"""
+        # Setup: Project doesn't exist
+        self.mock_os_cloud.identity.find_project.return_value = None
+        mock_os_project = MagicMock()
+        mock_os_project.id = 5555
+        self.mock_os_cloud.create_project.return_value = mock_os_project
+
+        # Setup: Group doesn't exist
+        self.mock_os_cloud.identity.find_group.return_value = None
+        mock_os_group = MagicMock()
+        mock_os_group.id = 6666
+        self.mock_os_cloud.create_group.return_value = mock_os_group
+
+        result = self.runner.invoke(app, ["--domain=customdomain", "--name=customname"])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify find_group was called with custom project group name
+        self.mock_os_cloud.identity.find_group.assert_any_call(
+            "customdomain-customname", domain_id=1234
+        )
+
+        # Verify create_group was called with custom name, description, and domain
+        self.mock_os_cloud.create_group.assert_called_once_with(
+            name="customdomain-customname",
+            description="Group for project customdomain-customname",
+            domain=1234,
+        )
+
+        # Verify roles were assigned with correct parameters
+        for role in self.os_roles:
+            self.mock_os_cloud.identity.assign_project_role_to_group.assert_any_call(
+                mock_os_project.id, mock_os_group.id, role.id
+            )
+
+    def test_cli_24(self):
+        """Test graceful error handling when group role assignment fails"""
+        # Setup: Project doesn't exist
+        self.mock_os_cloud.identity.find_project.return_value = None
+        mock_os_project = MagicMock()
+        mock_os_project.id = 7777
+        self.mock_os_cloud.create_project.return_value = mock_os_project
+
+        # Setup: Group doesn't exist
+        self.mock_os_cloud.identity.find_group.return_value = None
+        mock_os_group = MagicMock()
+        mock_os_group.id = 8888
+        self.mock_os_cloud.create_group.return_value = mock_os_group
+
+        # Setup: Role assignment fails (simulating permission error)
+        self.mock_os_cloud.identity.assign_project_role_to_group.side_effect = (
+            Exception("Permission denied")
+        )
+
+        result = self.runner.invoke(app, [])
+        # Should still succeed despite role assignment failure
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify group creation still happened
+        self.mock_os_cloud.create_group.assert_called_once()
+
+        # Verify role assignment was attempted
+        self.mock_os_cloud.identity.assign_project_role_to_group.assert_called()
+
+    def test_cli_25(self):
+        """Test domain-admin group creation on new domain
+
+        Verify that creating a new domain also creates the domain-admin group
+        with the correct name and description.
+        """
+        # Setup: Domain doesn't exist initially
+        self.mock_os_cloud.identity.find_domain.return_value = None
+        mock_domain = MagicMock()
+        mock_domain.id = "new-domain-id"
+        self.mock_os_cloud.create_domain.return_value = mock_domain
+
+        # Setup: Domain-admin group doesn't exist
+        self.mock_os_cloud.identity.find_group.return_value = None
+        mock_domain_admin_group = MagicMock()
+        mock_domain_admin_group.id = "domain-admin-group-id"
+        self.mock_os_cloud.create_group.return_value = mock_domain_admin_group
+
+        result = self.runner.invoke(app, ["--domain=testdomain", "--create-domain"])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify domain was created
+        self.mock_os_cloud.create_domain.assert_called_once_with(name="testdomain")
+
+        # Verify find_group was called for domain-admin group
+        self.mock_os_cloud.identity.find_group.assert_called_once_with(
+            "testdomain-admin", domain_id="new-domain-id"
+        )
+
+        # Verify domain-admin group was created with correct parameters
+        self.mock_os_cloud.create_group.assert_called_once_with(
+            name="testdomain-admin",
+            description="Admin group for domain testdomain",
+            domain="new-domain-id",
+        )
+
+    def test_cli_26(self):
+        """Test domain-admin group not created for existing domain
+
+        Verify that domain-admin group is NOT created when domain already exists.
+        """
+        # Setup: Domain already exists
+        mock_existing_domain = MagicMock()
+        mock_existing_domain.id = "existing-domain-id"
+        self.mock_os_cloud.identity.find_domain.return_value = mock_existing_domain
+
+        result = self.runner.invoke(app, ["--domain=existingdomain", "--create-domain"])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify create_domain was NOT called (domain already exists)
+        self.mock_os_cloud.create_domain.assert_not_called()
+
+        # Verify create_group for domain-admin was NOT called
+        # (domain-admin group creation only happens on new domain creation)
+        self.mock_os_cloud.create_group.assert_not_called()
+
+    def test_cli_27(self):
+        """Test domain-admin group assignment to new project
+
+        Verify domain-admin group receives DEFAULT_ROLES on new projects
+        in the domain.
+        """
+        # Setup: Project doesn't exist
+        self.mock_os_cloud.identity.find_project.return_value = None
+        mock_project = MagicMock()
+        mock_project.id = "new-project-id"
+        self.mock_os_cloud.create_project.return_value = mock_project
+
+        # Setup: Domain-admin group exists
+        mock_domain_admin_group = MagicMock()
+        mock_domain_admin_group.id = "domain-admin-group-id"
+
+        # Setup: Project group doesn't exist, but domain-admin group does
+        def find_group_side_effect(name, domain_id):
+            if name == "default-admin":
+                return mock_domain_admin_group
+            return None
+
+        self.mock_os_cloud.identity.find_group.side_effect = find_group_side_effect
+
+        # Setup: Return different groups for create_group calls
+        mock_project_group = MagicMock()
+        mock_project_group.id = "project-group-id"
+        self.mock_os_cloud.create_group.return_value = mock_project_group
+
+        result = self.runner.invoke(app, [])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify find_group was called for domain-admin group
+        assert any(
+            call("default-admin", domain_id=1234) == c
+            for c in self.mock_os_cloud.identity.find_group.call_args_list
+        )
+
+        # Verify domain-admin group was assigned DEFAULT_ROLES on the project
+        for role in self.os_roles:
+            self.mock_os_cloud.identity.assign_project_role_to_group.assert_any_call(
+                "new-project-id", "domain-admin-group-id", role.id
+            )
+
+    def test_cli_28(self):
+        """Test admin user added to domain-admin group
+
+        Verify admin user is added to domain-admin group when created
+        with --assign-admin-user --create-admin-user.
+        """
+        # Setup: Domain doesn't exist (will be created)
+        mock_domain = MagicMock()
+        mock_domain.id = "new-domain-id"
+        mock_admin_domain = MagicMock()
+        mock_admin_domain.id = "admin-domain-id"
+
+        def find_domain_side_effect(name):
+            if name == "default":
+                return mock_domain if self.mock_os_cloud.create_domain.called else None
+            else:  # admin domain
+                return mock_admin_domain
+
+        self.mock_os_cloud.identity.find_domain.side_effect = find_domain_side_effect
+        self.mock_os_cloud.create_domain.return_value = mock_domain
+
+        # Setup: Admin user doesn't exist
+        self.mock_os_cloud.identity.find_user.return_value = None
+        mock_admin_user = MagicMock()
+        mock_admin_user.id = "admin-user-id"
+        self.mock_os_cloud.create_user.return_value = mock_admin_user
+
+        # Setup: Domain-admin group will be created
+        mock_domain_admin_group = MagicMock()
+        mock_domain_admin_group.id = "domain-admin-group-id"
+
+        # Project group doesn't exist initially
+        mock_project_group = MagicMock()
+        mock_project_group.id = "project-group-id"
+
+        def find_group_side_effect(name, domain_id):
+            if name == "default-admin":
+                # Return the group after it's been created
+                return (
+                    mock_domain_admin_group
+                    if self.mock_os_cloud.create_group.called
+                    else None
+                )
+            return None
+
+        self.mock_os_cloud.identity.find_group.side_effect = find_group_side_effect
+
+        # First call creates domain-admin group, second creates project group
+        # Third call finds domain-admin group
+        self.mock_os_cloud.create_group.side_effect = [
+            mock_domain_admin_group,
+            mock_project_group,
+        ]
+
+        # Setup: Project doesn't exist
+        self.mock_os_cloud.identity.find_project.return_value = None
+        mock_project = MagicMock()
+        mock_project.id = "new-project-id"
+        self.mock_os_cloud.create_project.return_value = mock_project
+
+        result = self.runner.invoke(app, ["--assign-admin-user", "--create-admin-user"])
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify domain-admin group was created
+        assert any(
+            c
+            == call(
+                name="default-admin",
+                description="Admin group for domain default",
+                domain="new-domain-id",
+            )
+            for c in self.mock_os_cloud.create_group.call_args_list
+        )
+
+        # Verify admin user was created
+        self.mock_os_cloud.create_user.assert_called_once()
+
+        # Verify admin user was added to domain-admin group
+        self.mock_os_cloud.identity.add_user_to_group.assert_called_once_with(
+            mock_admin_user, mock_domain_admin_group
+        )
+
+    def test_cli_29(self):
+        """Test no group operations in create-domain-only mode
+
+        Verify admin user is NOT added to group when using --create-domain
+        because there is no project context.
+        """
+        # Setup: Domain doesn't exist (will be created)
+        mock_domain = MagicMock()
+        mock_domain.id = "new-domain-id"
+        mock_admin_domain = MagicMock()
+        mock_admin_domain.id = "admin-domain-id"
+
+        def find_domain_side_effect(name):
+            if name == "default":
+                return mock_domain if self.mock_os_cloud.create_domain.called else None
+            else:  # admin domain
+                return mock_admin_domain
+
+        self.mock_os_cloud.identity.find_domain.side_effect = find_domain_side_effect
+        self.mock_os_cloud.create_domain.return_value = mock_domain
+
+        # Setup: Admin user doesn't exist
+        self.mock_os_cloud.identity.find_user.return_value = None
+        mock_admin_user = MagicMock()
+        mock_admin_user.id = "admin-user-id"
+        self.mock_os_cloud.create_user.return_value = mock_admin_user
+
+        # Setup: Domain-admin group will be created
+        mock_domain_admin_group = MagicMock()
+        mock_domain_admin_group.id = "domain-admin-group-id"
+
+        self.mock_os_cloud.identity.find_group.return_value = None
+        self.mock_os_cloud.create_group.return_value = mock_domain_admin_group
+
+        result = self.runner.invoke(
+            app, ["--create-domain", "--assign-admin-user", "--create-admin-user"]
+        )
+        self.assertEqual(result.exit_code, 0, (result, result.stdout))
+
+        # Verify domain-admin group was created
+        self.mock_os_cloud.create_group.assert_called_once_with(
+            name="default-admin",
+            description="Admin group for domain default",
+            domain="new-domain-id",
+        )
+
+        # Verify admin user was created
+        self.mock_os_cloud.create_user.assert_called_once()
+
+        # Verify admin user was NOT added to domain-admin group
+        # (because --create-domain skips project operations)
+        self.mock_os_cloud.identity.add_user_to_group.assert_not_called()
 
 
 if __name__ == "__main__":
