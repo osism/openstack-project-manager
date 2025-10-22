@@ -47,6 +47,18 @@ def try_assign_role(
         pass
 
 
+def try_assign_role_to_group(
+    os_cloud: openstack.connection.Connection,
+    project: openstack.identity.v3.project.Project,
+    group: openstack.identity.v3.group.Group,
+    role: openstack.identity.v3.role.Role,
+) -> None:
+    try:
+        os_cloud.identity.assign_project_role_to_group(project.id, group.id, role.id)
+    except:
+        pass
+
+
 def run(
     assign_admin_user: Annotated[
         bool,
@@ -186,12 +198,49 @@ def run(
         domain = os_cloud.create_domain(name=domain_name)
         domain_created = True
 
+    # Create domain admin group if domain was just created
+    if domain_created:
+        domain_admin_group_name = f"{domain_name}-admin"
+        domain_admin_group = os_cloud.identity.find_group(
+            domain_admin_group_name, domain_id=domain.id
+        )
+        if not domain_admin_group:
+            domain_admin_group = os_cloud.create_group(
+                name=domain_admin_group_name,
+                description=f"Admin group for domain {domain_name}",
+                domain=domain.id,
+            )
+            logger.info(f"Created domain admin group: {domain_admin_group_name}")
+
     # Find or create the project
     if not create_domain:
         # FIXME(berendt): use get_project
         project = os_cloud.identity.find_project(name, domain_id=domain.id)
         if not project:
             project = os_cloud.create_project(name=name, domain_id=domain.id)
+
+        # Find or create a group with the same name as the project
+        group = os_cloud.identity.find_group(name, domain_id=domain.id)
+        if not group:
+            group = os_cloud.create_group(
+                name=name, description=f"Group for project {name}", domain=domain.id
+            )
+
+        # Assign default roles to the group for the project
+        for role_name in DEFAULT_ROLES:
+            try_assign_role_to_group(os_cloud, project, group, CACHE_ROLES[role_name])
+
+        # Assign domain admin group to the project with default roles
+        domain_admin_group_name = f"{domain_name}-admin"
+        domain_admin_group = os_cloud.identity.find_group(
+            domain_admin_group_name, domain_id=domain.id
+        )
+        if domain_admin_group:
+            for role_name in DEFAULT_ROLES:
+                try_assign_role_to_group(
+                    os_cloud, project, domain_admin_group, CACHE_ROLES[role_name]
+                )
+            logger.info(f"Assigned domain admin group to project: {name}")
 
         # FIXME(berendt): use openstacksdk
         keystone = os_client_config.make_client("identity", cloud=cloud_name)
@@ -352,6 +401,22 @@ def run(
                     try_assign_role(
                         os_cloud, project, admin_user, CACHE_ROLES[role_name]
                     )
+
+            # Add admin user to domain admin group (only when not in domain-only mode)
+            if admin_user and not create_domain:
+                domain_admin_group_name = f"{domain_name}-admin"
+                domain_admin_group = os_cloud.identity.find_group(
+                    domain_admin_group_name, domain_id=domain.id
+                )
+                if domain_admin_group:
+                    try:
+                        os_cloud.identity.add_user_to_group(
+                            admin_user, domain_admin_group
+                        )
+                        logger.info(f"Added {admin_name} to domain admin group")
+                    except:
+                        # User might already be in the group
+                        pass
 
     result = [
         ["domain", domain_name, domain.id],
