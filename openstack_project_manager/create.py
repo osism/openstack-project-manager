@@ -355,7 +355,13 @@ def run(
                     },
                     "region_name": os_cloud.config.region_name,
                     "interface": os_cloud.config.get_interface(),
+                    # Propagate SSL verification settings from main connection
+                    "verify": os_cloud.config.verify,
                 }
+
+                # If there's a CA bundle configured, add it
+                if hasattr(os_cloud.config, "cacert") and os_cloud.config.cacert:
+                    user_cloud_config["cacert"] = os_cloud.config.cacert
 
                 # Create connection as the user
                 user_connection = openstack.connect(**user_cloud_config)
