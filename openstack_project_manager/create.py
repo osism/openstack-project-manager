@@ -397,7 +397,11 @@ def run(
                     name=admin_name, password=admin_password, domain_id=admin_domain_id
                 )
 
-                if domain_created and DEFAULT_MANAGER_ROLE in CACHE_ROLES:
+                if (
+                    domain_created
+                    and not create_domain
+                    and DEFAULT_MANAGER_ROLE in CACHE_ROLES
+                ):
                     try_assign_role(
                         os_cloud, project, admin_user, CACHE_ROLES[DEFAULT_MANAGER_ROLE]
                     )
