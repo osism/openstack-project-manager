@@ -472,13 +472,13 @@ def check_volume_types(
             ]
 
             if len(volume_types) > 1:
-                logger.error(
+                logger.warning(
                     f"{project.name} - volume type {item} not unique, please use volume type ID"
                 )
                 continue
 
             if len(volume_types) == 0:
-                logger.error(f"{project.name} - volume type {item} not found")
+                logger.warning(f"{project.name} - volume type {item} not found")
                 continue
 
             try:
