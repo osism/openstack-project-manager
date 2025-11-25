@@ -445,6 +445,75 @@ def manage_external_network_rbacs(
         del_service_network(configuration, project, public_net_name)
 
 
+def check_default_volume_type(
+    configuration: Configuration,
+    project: openstack.identity.v3.project.Project,
+    domain: openstack.identity.v3.domain.Domain,
+    classes: str,
+) -> None:
+    """Set default volume type for a project.
+
+    The default_volume_type can be specified either:
+    1. As a project property (takes precedence)
+    2. In the quotaclass configuration
+
+    Before setting, the volume type existence is verified.
+    """
+    # Determine the default_volume_type value
+    default_volume_type = None
+
+    # Check project property first (takes precedence)
+    if "default_volume_type" in project:
+        default_volume_type = project.default_volume_type
+    else:
+        # Check quotaclass
+        if "quotaclass" in project:
+            quotaclass = get_quotaclass(classes, project.quotaclass)
+        else:
+            if domain.name.startswith("ok"):
+                quotaclass = get_quotaclass(classes, "okeanos")
+            else:
+                quotaclass = get_quotaclass(classes, "basic")
+
+        if quotaclass and "default_volume_type" in quotaclass:
+            default_volume_type = quotaclass["default_volume_type"]
+
+    if not default_volume_type:
+        return
+
+    logger.info(f"{project.name} - check default volume type")
+
+    # Verify the volume type exists
+    volume_type = configuration.os_cloud.block_storage.find_type(default_volume_type)
+
+    if not volume_type:
+        logger.warning(
+            f"{project.name} - default volume type {default_volume_type} not found"
+        )
+        return
+
+    # Get current default volume type for the project
+    try:
+        current_default = configuration.os_cloud.block_storage.show_default_type(
+            project.id
+        )
+        current_type_id = (
+            current_default.get("volume_type_id") if current_default else None
+        )
+    except Exception:
+        current_type_id = None
+
+    # Set default volume type if different
+    if current_type_id != volume_type.id:
+        logger.info(
+            f"{project.name} - setting default volume type to {default_volume_type}"
+        )
+        if not configuration.dry_run:
+            configuration.os_cloud.block_storage.set_default_type(
+                project.id, volume_type.id
+            )
+
+
 def check_volume_types(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
@@ -1271,6 +1340,7 @@ def process_project(
             create_network_resources(configuration, project, domain)
 
         check_volume_types(configuration, project, domain, classes)
+        check_default_volume_type(configuration, project, domain, classes)
 
         if manage_privatevolumetypes:
             manage_private_volumetypes(configuration, project, domain)
