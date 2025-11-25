@@ -14,6 +14,7 @@ from openstack_project_manager.manage import (
     check_quota,
     update_bandwidth_policy_rule,
     manage_external_network_rbacs,
+    check_default_volume_type,
     check_volume_types,
     check_bandwidth_limit,
     manage_private_volumetypes,
@@ -71,6 +72,10 @@ volume_test:
   volume_types:
     item1:
       name: name
+
+default_volume_type_test:
+  parent: default
+  default_volume_type: ssd
 
 flavor_test:
   parent: default
@@ -618,6 +623,119 @@ class TestCheckVolumeTypes(TestBase):
         manage_private_volumetypes(self.config, mock_admin_project, self.mock_domain)
 
         self.config.os_cloud.block_storage.types.assert_not_called()
+
+
+class TestCheckDefaultVolumeType(TestBase):
+
+    def setUp(self):
+        self.select_quota_class = "default_volume_type_test"
+        super().setUp()
+
+        self.mock_project = MagicMock()
+        self.mock_project.id = 1234
+        self.mock_project.name = "test_project"
+
+        self.mock_domain = MagicMock()
+        self.mock_domain.id = 5678
+        self.mock_domain.name = "TestDomain"
+
+    def mock_volume_type(self, name, type_id):
+        vt = MagicMock()
+        vt.name = name
+        vt.id = type_id
+        return vt
+
+    def test_check_default_volume_type_from_quotaclass(self):
+        """Test setting default volume type from quotaclass."""
+        # Only quotaclass is set, not default_volume_type project property
+        self.mock_project.__contains__.side_effect = lambda x: x == "quotaclass"
+        self.mock_project.quotaclass = "default_volume_type_test"
+
+        vt = self.mock_volume_type("ssd", "vt-123")
+        self.config.os_cloud.block_storage.find_type.return_value = vt
+        self.config.os_cloud.block_storage.show_default_type.return_value = None
+
+        check_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yaml"
+        )
+
+        self.config.os_cloud.block_storage.find_type.assert_called_once_with("ssd")
+        self.config.os_cloud.block_storage.set_default_type.assert_called_once_with(
+            1234, "vt-123"
+        )
+
+    def test_check_default_volume_type_from_project_property(self):
+        """Test setting default volume type from project property (takes precedence)."""
+        self.mock_project.__contains__.side_effect = lambda x: x in [
+            "quotaclass",
+            "default_volume_type",
+        ]
+        self.mock_project.quotaclass = "default_volume_type_test"
+        self.mock_project.default_volume_type = "hdd"
+
+        vt = self.mock_volume_type("hdd", "vt-456")
+        self.config.os_cloud.block_storage.find_type.return_value = vt
+        self.config.os_cloud.block_storage.show_default_type.return_value = None
+
+        check_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yaml"
+        )
+
+        # Should use project property, not quotaclass
+        self.config.os_cloud.block_storage.find_type.assert_called_once_with("hdd")
+        self.config.os_cloud.block_storage.set_default_type.assert_called_once_with(
+            1234, "vt-456"
+        )
+
+    def test_check_default_volume_type_not_found(self):
+        """Test handling when volume type does not exist."""
+        # Only quotaclass is set, not default_volume_type project property
+        self.mock_project.__contains__.side_effect = lambda x: x == "quotaclass"
+        self.mock_project.quotaclass = "default_volume_type_test"
+
+        self.config.os_cloud.block_storage.find_type.return_value = None
+
+        check_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yaml"
+        )
+
+        self.config.os_cloud.block_storage.find_type.assert_called_once_with("ssd")
+        self.config.os_cloud.block_storage.set_default_type.assert_not_called()
+
+    def test_check_default_volume_type_already_set(self):
+        """Test skipping when default volume type is already set correctly."""
+        # Only quotaclass is set, not default_volume_type project property
+        self.mock_project.__contains__.side_effect = lambda x: x == "quotaclass"
+        self.mock_project.quotaclass = "default_volume_type_test"
+
+        vt = self.mock_volume_type("ssd", "vt-123")
+        self.config.os_cloud.block_storage.find_type.return_value = vt
+        self.config.os_cloud.block_storage.show_default_type.return_value = {
+            "volume_type_id": "vt-123"
+        }
+
+        check_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yaml"
+        )
+
+        self.config.os_cloud.block_storage.find_type.assert_called_once_with("ssd")
+        self.config.os_cloud.block_storage.set_default_type.assert_not_called()
+
+    def test_check_default_volume_type_no_config(self):
+        """Test when no default_volume_type is configured."""
+        # Only quotaclass is set, using 'default' class which has no default_volume_type
+        self.mock_project.__contains__.side_effect = lambda x: x == "quotaclass"
+        self.mock_project.quotaclass = "default"
+
+        # Override the mock to return a quotaclass without default_volume_type
+        self.mock_get_quotaclass.return_value = copy.copy(MOCK_QUOTA_CLASSES["default"])
+
+        check_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yaml"
+        )
+
+        self.config.os_cloud.block_storage.find_type.assert_not_called()
+        self.config.os_cloud.block_storage.set_default_type.assert_not_called()
 
 
 class TestCheckPrivateFlavorTypes(TestBase):
