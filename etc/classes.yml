@@ -96,7 +96,13 @@ service:
     security_group_rule: -1
     subnet: 256
     subnetpool: 256
-  volume: {}
+  volume:
+    backup_gigabytes: -1
+    backups: -1
+    gigabytes: 4096
+    per_volume_gigabytes: -1
+    snapshots: -1
+    volumes: -1
 
 basic:
   parent: default
