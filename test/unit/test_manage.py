@@ -1,11 +1,13 @@
 import unittest
-from unittest.mock import MagicMock, patch, ANY
+from unittest.mock import MagicMock, patch, ANY, call
 
 import copy
 import yaml
 
 import typer
 from typer.testing import CliRunner
+
+from openstack import exceptions as os_excs
 
 from openstack_project_manager.manage import (
     Configuration,
@@ -17,6 +19,7 @@ from openstack_project_manager.manage import (
     check_volume_types,
     check_bandwidth_limit,
     manage_private_volumetypes,
+    manage_default_volume_type,
     check_flavors,
     manage_private_flavors,
     create_network_resources,
@@ -618,6 +621,231 @@ class TestCheckVolumeTypes(TestBase):
         manage_private_volumetypes(self.config, mock_admin_project, self.mock_domain)
 
         self.config.os_cloud.block_storage.types.assert_not_called()
+
+
+class TestManageDefaultVolumeType(TestBase):
+
+    def _mock_type(self, id, name, is_public):
+        volume_type = MagicMock()
+        volume_type.id = id
+        volume_type.name = name
+        volume_type.is_public = is_public
+        return volume_type
+
+    def _mock_default_type(self, project_id, volume_type_id):
+        default_type = MagicMock()
+        default_type.project_id = project_id
+        default_type.volume_type_id = volume_type_id
+        return default_type
+
+    def _mock_block_storage_types(self, is_public=True):
+        for vt in self._mock_types:
+            if vt.is_public == is_public:
+                yield vt
+
+    def setUp(self):
+        super().setUp()
+
+        self.mock_project = MagicMock()
+        self.mock_project.id = 1234
+
+        self.mock_domain = MagicMock()
+        self.mock_domain.id = 5678
+        self.mock_domain.name = "CoMpAnY"
+
+        self._mock_types = [
+            self._mock_type(x, "test_" + str(x), bool(x % 2))
+            for x in range(1000, 2000, 123)
+        ]
+
+        self.config.os_cloud.block_storage.types.side_effect = (
+            self._mock_block_storage_types
+        )
+
+    def test_manage_default_volume_type_0(self):
+        """
+        Test:
+        Default volume type not set for project.
+        No default volume type declared
+        """
+        self.config.os_cloud.block_storage.show_default_type.side_effect = (
+            os_excs.NotFoundException
+        )
+
+        manage_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yml"
+        )
+
+        self.config.os_cloud.block_storage.types.assert_not_called()
+        self.config.os_cloud.block_storage.show_default_type.assert_called_once_with(
+            self.mock_project
+        )
+        self.config.os_cloud.block_storage.unset_default_type.assert_not_called()
+        self.config.os_cloud.block_storage.set_default_type.assert_not_called()
+
+    def test_manage_default_volume_type_1(self):
+        """
+        Test:
+        Default volume type not set for project.
+        Default existent volume type declared by id
+        """
+        mock_default_volume_type = self._mock_types[0]
+        self.mock_project.default_volume_type = mock_default_volume_type.id
+        self.mock_project.__contains__.side_effect = lambda key: key in [
+            "default_volume_type"
+        ]  # NOTE: Mock 'default_volume_type' in mock_project
+        self.config.os_cloud.block_storage.show_default_type.side_effect = (
+            os_excs.NotFoundException
+        )
+
+        manage_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yml"
+        )
+
+        self.config.os_cloud.block_storage.types.assert_has_calls(
+            [call(is_public=True), call(is_public=False)]
+        )
+        self.config.os_cloud.block_storage.show_default_type.assert_called_once_with(
+            self.mock_project
+        )
+        self.config.os_cloud.block_storage.unset_default_type.assert_not_called()
+        self.config.os_cloud.block_storage.set_default_type.assert_called_once_with(
+            self.mock_project, mock_default_volume_type
+        )
+
+    def test_manage_default_volume_type_2(self):
+        """
+        Test:
+        Default volume type set for project.
+        Same existent default volume type declared by name
+        """
+        mock_default_volume_type = self._mock_types[0]
+        self.mock_project.default_volume_type = mock_default_volume_type.name
+        self.mock_project.__contains__.side_effect = lambda key: key in [
+            "default_volume_type"
+        ]  # NOTE: Mock 'default_volume_type' in mock_project
+        self.config.os_cloud.block_storage.show_default_type.side_effect = (
+            lambda project: self._mock_default_type(project.id, self._mock_types[0].id)
+        )
+
+        manage_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yml"
+        )
+
+        self.config.os_cloud.block_storage.types.assert_has_calls(
+            [call(is_public=True), call(is_public=False)]
+        )
+        self.config.os_cloud.block_storage.show_default_type.assert_called_once_with(
+            self.mock_project
+        )
+        self.config.os_cloud.block_storage.unset_default_type.assert_not_called()
+        self.config.os_cloud.block_storage.set_default_type.assert_not_called()
+
+    def test_manage_default_volume_type_3(self):
+        """
+        Test:
+        Default volume type set for project.
+        Different existent default volume type declared by name
+        """
+        mock_default_volume_type = self._mock_types[1]
+        self.mock_project.default_volume_type = mock_default_volume_type.name
+        self.mock_project.__contains__.side_effect = lambda key: key in [
+            "default_volume_type"
+        ]  # NOTE: Mock 'default_volume_type' in mock_project
+        self.config.os_cloud.block_storage.show_default_type.side_effect = (
+            lambda project: self._mock_default_type(project.id, self._mock_types[0].id)
+        )
+
+        manage_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yml"
+        )
+
+        self.config.os_cloud.block_storage.types.assert_has_calls(
+            [call(is_public=True), call(is_public=False)]
+        )
+        self.config.os_cloud.block_storage.show_default_type.assert_called_once_with(
+            self.mock_project
+        )
+        self.config.os_cloud.block_storage.unset_default_type.assert_not_called()
+        self.config.os_cloud.block_storage.set_default_type.assert_called_once_with(
+            self.mock_project, mock_default_volume_type
+        )
+
+    def test_manage_default_volume_type_4(self):
+        """
+        Test:
+        Default volume type set for project.
+        Different non-existent default volume type declared by id
+        """
+        mock_default_volume_type = self._mock_type(2000, "non_existent", False)
+        self.mock_project.default_volume_type = mock_default_volume_type.id
+        self.mock_project.__contains__.side_effect = lambda key: key in [
+            "default_volume_type"
+        ]  # NOTE: Mock 'default_volume_type' in mock_project
+        self.config.os_cloud.block_storage.show_default_type.side_effect = (
+            lambda project: self._mock_default_type(project.id, self._mock_types[1].id)
+        )
+
+        manage_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yml"
+        )
+
+        self.config.os_cloud.block_storage.types.assert_has_calls(
+            [call(is_public=True), call(is_public=False)]
+        )
+        self.config.os_cloud.block_storage.show_default_type.assert_not_called()
+        self.config.os_cloud.block_storage.unset_default_type.assert_not_called()
+        self.config.os_cloud.block_storage.set_default_type.assert_not_called()
+
+    def test_manage_default_volume_type_5(self):
+        """
+        Test:
+        Default volume type set for project.
+        No default volume type declared
+        """
+        self.config.os_cloud.block_storage.show_default_type.side_effect = (
+            lambda project: self._mock_default_type(project.id, self._mock_types[1].id)
+        )
+
+        manage_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yml"
+        )
+
+        self.config.os_cloud.block_storage.types.assert_not_called()
+        self.config.os_cloud.block_storage.show_default_type.assert_called_once_with(
+            self.mock_project
+        )
+        self.config.os_cloud.block_storage.unset_default_type.assert_called_once_with(
+            self.mock_project
+        )
+        self.config.os_cloud.block_storage.set_default_type.assert_not_called()
+
+    def test_manage_default_volume_type_6(self):
+        """
+        Test:
+        Default volume type set for project.
+        Default volume type declared, but unset
+        """
+        self.mock_project.default_volume_type = ""
+        self.mock_project.__contains__.side_effect = lambda key: key in [
+            "default_volume_type"
+        ]  # NOTE: Mock 'default_volume_type' in mock_project
+        self.config.os_cloud.block_storage.show_default_type.side_effect = (
+            lambda project: self._mock_default_type(project.id, self._mock_types[1].id)
+        )
+
+        manage_default_volume_type(
+            self.config, self.mock_project, self.mock_domain, "classes.yml"
+        )
+
+        self.config.os_cloud.block_storage.types.assert_not_called()
+        self.config.os_cloud.block_storage.show_default_type.assert_called_once_with(
+            self.mock_project
+        )
+        self.config.os_cloud.block_storage.unset_default_type.assert_called_once_with(
+            self.mock_project
+        )
+        self.config.os_cloud.block_storage.set_default_type.assert_not_called()
 
 
 class TestCheckPrivateFlavorTypes(TestBase):
@@ -1326,6 +1554,7 @@ class TestProcessProject(TestBase):
         self.config.os_cloud.get_domain.return_value = self.mock_domain
 
     @patch("openstack_project_manager.manage.manage_private_flavors")
+    @patch("openstack_project_manager.manage.manage_default_volume_type")
     @patch("openstack_project_manager.manage.manage_private_volumetypes")
     @patch("openstack_project_manager.manage.check_volume_types")
     @patch("openstack_project_manager.manage.create_network_resources")
@@ -1346,10 +1575,11 @@ class TestProcessProject(TestBase):
         mock_create_network_resources,
         mock_check_volume_types,
         mock_manage_private_volumetypes,
+        mock_manage_default_volume_type,
         mock_manage_private_flavors,
     ):
         process_project(
-            self.config, self.mock_project, "classes.yaml", True, True, True, True
+            self.config, self.mock_project, "classes.yaml", True, True, True, True, True
         )
 
         mock_check_quota.assert_called_once_with(
@@ -1373,11 +1603,15 @@ class TestProcessProject(TestBase):
         mock_manage_private_volumetypes.assert_called_once_with(
             self.config, self.mock_project, self.mock_domain
         )
+        mock_manage_default_volume_type.assert_called_once_with(
+            self.config, self.mock_project, self.mock_domain, "classes.yaml"
+        )
         mock_manage_private_flavors.assert_called_once_with(
             self.config, self.mock_project, self.mock_domain
         )
 
     @patch("openstack_project_manager.manage.manage_private_flavors")
+    @patch("openstack_project_manager.manage.manage_default_volume_type")
     @patch("openstack_project_manager.manage.manage_private_volumetypes")
     @patch("openstack_project_manager.manage.check_volume_types")
     @patch("openstack_project_manager.manage.create_network_resources")
@@ -1398,6 +1632,7 @@ class TestProcessProject(TestBase):
         mock_create_network_resources,
         mock_check_volume_types,
         mock_manage_private_volumetypes,
+        mock_manage_default_volume_type,
         mock_manage_private_flavors,
     ):
         self.config.assign_admin_user = False
@@ -1410,7 +1645,14 @@ class TestProcessProject(TestBase):
         self.mock_project.get.return_value = "True"
 
         process_project(
-            self.config, self.mock_project, "classes.yaml", False, False, False, False
+            self.config,
+            self.mock_project,
+            "classes.yaml",
+            False,
+            False,
+            False,
+            False,
+            False,
         )
 
         mock_check_quota.assert_called_once_with(
@@ -1432,9 +1674,11 @@ class TestProcessProject(TestBase):
             self.config, self.mock_project, self.mock_domain, "classes.yaml"
         )
         mock_manage_private_volumetypes.assert_not_called()
+        mock_manage_default_volume_type.assert_not_called()
         mock_manage_private_flavors.assert_not_called()
 
     @patch("openstack_project_manager.manage.manage_private_flavors")
+    @patch("openstack_project_manager.manage.manage_default_volume_type")
     @patch("openstack_project_manager.manage.manage_private_volumetypes")
     @patch("openstack_project_manager.manage.check_volume_types")
     @patch("openstack_project_manager.manage.create_network_resources")
@@ -1455,6 +1699,7 @@ class TestProcessProject(TestBase):
         mock_create_network_resources,
         mock_check_volume_types,
         mock_manage_private_volumetypes,
+        mock_manage_default_volume_type,
         mock_manage_private_flavors,
     ):
         def mock_contains(name):
@@ -1465,7 +1710,7 @@ class TestProcessProject(TestBase):
         self.mock_project.get.return_value = "True"
 
         process_project(
-            self.config, self.mock_project, "classes.yaml", True, True, True, True
+            self.config, self.mock_project, "classes.yaml", True, True, True, True, True
         )
 
         mock_check_quota.assert_not_called()
@@ -1477,6 +1722,7 @@ class TestProcessProject(TestBase):
         mock_create_network_resources.assert_not_called()
         mock_check_volume_types.assert_not_called()
         mock_manage_private_volumetypes.assert_not_called()
+        mock_manage_default_volume_type.assert_not_called()
         mock_manage_private_flavors.assert_not_called()
 
     @patch("openstack_project_manager.manage.check_quota")
@@ -1578,7 +1824,7 @@ class TestCLI(CloudTest):
     def assume_project_1(self, assume_cache_images):
         self.mock_handle_unmanaged_project.assert_not_called()
         self.mock_process_project.assert_called_once_with(
-            ANY, self.mock_project1, ANY, False, False, True, True
+            ANY, self.mock_project1, ANY, False, False, True, True, True
         )
         if not assume_cache_images:
             self.mock_cache_images.assert_not_called()
@@ -1613,7 +1859,7 @@ class TestCLI(CloudTest):
             ANY, self.mock_project2, ANY
         )
         self.mock_process_project.assert_called_once_with(
-            ANY, self.mock_project1, ANY, False, False, True, True
+            ANY, self.mock_project1, ANY, False, False, True, True, True
         )
         self.mock_cache_images.assert_any_call(ANY, self.mock_domain1)
         self.mock_cache_images.assert_any_call(ANY, self.mock_domain2)
@@ -1678,6 +1924,7 @@ class TestCLI(CloudTest):
                 "--manage-endpoints",
                 "--manage-homeprojects",
                 "--nomanage-privatevolumetypes",
+                "--nomanage-defaultvolumetype",
                 "--nomanage-privateflavors",
                 "--classes=other.yaml",
             ],
@@ -1685,7 +1932,7 @@ class TestCLI(CloudTest):
         self.assertEqual(result.exit_code, 0, (result, result.stdout))
 
         self.mock_process_project.assert_called_once_with(
-            ANY, self.mock_project1, "other.yaml", True, True, False, False
+            ANY, self.mock_project1, "other.yaml", True, True, False, False, False
         )
 
     def test_cli_9(self):
