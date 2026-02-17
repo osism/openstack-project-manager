@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "6392a1bb90f9db3eca126d713c78506490e3de152b349189d48030a7f9f56e34"
+            "sha256": "d8337a42260f50f28d56365a18b192d02e354476a8eef7e11ce423d859f8e97a"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -267,11 +267,11 @@
         },
         "cliff": {
             "hashes": [
-                "sha256:b79cc0b2c19f6c6e78c82bd923e06785035d77cb0d2a1a483229f0a2836f0ca7",
-                "sha256:efdd2c18a4626467600fa3871f19ab4c04e847930d11e6a08aeab5c361aba754"
+                "sha256:adb12978c79260fdd71cda9a1620caffc91b027606a65679c9d88c526a80de23",
+                "sha256:e949b585b9b64549de87388cefd49e87dd63095ce2b9f3b98f9123d7cd94be1a"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==4.13.1"
+            "version": "==4.13.2"
         },
         "cmd2": {
             "hashes": [
@@ -529,12 +529,12 @@
         },
         "openstacksdk": {
             "hashes": [
-                "sha256:b28459c7cb6405f9d6fc573689ea5c5e357424828f6c76f7b2b0d763c80fb6ea",
-                "sha256:dddc786237af443af53921ed6ce7ed8cb96a34447d3c2f39942a296a8e4711f7"
+                "sha256:5dde9ae3f1e2411a87ff57b2d78da53fac8eae9e5bac8e5870927cb62ddfc033",
+                "sha256:c75927fb29a9c82d8dd116f16c72093a623d507f9a4aca63f3c26ad8ddf99855"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.10'",
-            "version": "==4.9.0"
+            "version": "==4.10.0"
         },
         "os-client-config": {
             "hashes": [
@@ -555,35 +555,35 @@
         },
         "osc-lib": {
             "hashes": [
-                "sha256:18c6941415df37df64f08ce5b7f648b8a1e2a737e5643dac36c781aca8ba21c6",
-                "sha256:4f7f682c0e7df187aecba5bbbb5ee64796a2da03d23cba981245bdc27f6f8b97"
+                "sha256:6a615d744f03fba513d92eb4760a9cd5baa96e3d8530611fe53b217062bf317e",
+                "sha256:f9a15389d93ac8e9f2bb22bc2bf974a971ea67376470058b48a1403224ecd39b"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==4.3.0"
+            "version": "==4.4.0"
         },
         "oslo.config": {
             "hashes": [
-                "sha256:6298bb78d87d97cb5032b116941dc8305a792d5467e2e031c8ff7fadcaa7e211",
-                "sha256:6d282113f2fb2ee4d40c8becdb4ac39917c3f447c3bb355abf47f0d6181edffc"
+                "sha256:b17d983bd1845087d282f19d583cae0da5bfe725dc6884c9a7d50454839640c9",
+                "sha256:c405a40a8b05aa97bb5c24bb0b849981a7a5b7d56304df40632722312c58eaca"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==10.2.0"
+            "version": "==10.3.0"
         },
         "oslo.context": {
             "hashes": [
-                "sha256:465c67da4d92dc2960deec148dee469d7ae7736af869581e2e3b73ce2cfa27a8",
-                "sha256:6ea0b5d04c3577090d6513ce4533a74cdcee958e34a6fc54d820267b799f9d29"
+                "sha256:c3a47bd597d497aa1bab5a8c8c0cb654d0a7a7d9aa805bb11e5ca22b4cc3622d",
+                "sha256:e504f8df02c5cce7fc984f867fbdfaaa1d4d4b9b88978e291f6e5cb89df5a3e0"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==6.2.0"
+            "version": "==6.3.0"
         },
         "oslo.i18n": {
             "hashes": [
-                "sha256:36f5f88e05415f6bef28c3d7ee0eca634a6b3ada2d38df2c0f8d675dc1bfd5aa",
-                "sha256:7dc879089056fe287a6fb46fa2e73ad88f8d4b989bd63f00486f494435b24ced"
+                "sha256:5505cfc03a917b448bfaaf6f1221a1c36efbcc1a5b8c29407824bf5b056c5e0e",
+                "sha256:b1241ad3eee216e9dc9acb4336fce0bd79c4c286751ee70dfa42ff2f9763d34f"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==6.7.1"
+            "version": "==6.7.2"
         },
         "oslo.log": {
             "hashes": [
@@ -595,11 +595,11 @@
         },
         "oslo.serialization": {
             "hashes": [
-                "sha256:5dd15a7f2ffaed25e8d3c295ee305d3b864b04e4ae3d705ad9e628d5ab8a82f8",
-                "sha256:a94ca819f4ed5bb23bc2698e9be21aaa62c8d411dbb6ff9655e19c4b60ea8e59"
+                "sha256:086ab78a15f33f02e647bdb3ca36632480d94cf661cf1fb118adebdeee5d4be7",
+                "sha256:7326426cff711fbf0565d369c8f7ccb33126ee2dc96fd89334ce584d790e49de"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==5.9.0"
+            "version": "==5.9.1"
         },
         "oslo.utils": {
             "hashes": [
