@@ -166,6 +166,12 @@ def run(
     service_network_cidr: Annotated[
         str, typer.Option("--service-network-cidr", help="Service network CIDR")
     ] = "",
+    default_volume_type: Annotated[
+        Optional[str],
+        typer.Option(
+            "--default-volume-type", help="Project-specific default volume type"
+        ),
+    ] = None,
 ) -> None:
 
     # Connect to the OpenStack environment
@@ -304,6 +310,12 @@ def run(
 
         # Set other parameters of the project
         keystone.projects.update(project=project.id, owner=owner)
+
+        # Set default volume type of the project
+        if default_volume_type:
+            keystone.projects.update(
+                project=project.id, default_volume_type=default_volume_type
+            )
 
         # The network resources of the project should be created automatically
         if managed_network_resources:
