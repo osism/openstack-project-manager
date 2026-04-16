@@ -347,6 +347,7 @@ class TestCLI(unittest.TestCase):
                 "--name=othername",
                 "--owner=otherowner",
                 "--public-network=otherpublic",
+                "--default-volume-type=othertype",
             ],
         )
         self.assertEqual(result.exit_code, 0, (result, result.stdout))
@@ -365,6 +366,9 @@ class TestCLI(unittest.TestCase):
         )
         self.mock_os_keystone.projects.update.assert_any_call(
             project=9012, owner="otherowner"
+        )
+        self.mock_os_keystone.projects.update.assert_any_call(
+            project=9012, default_volume_type="othertype"
         )
         self.mock_os_cloud.identity.find_user.assert_called_once_with(
             "otherdomain-admin", domain_id=1234

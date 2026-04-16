@@ -530,6 +530,84 @@ def manage_private_volumetypes(
         configuration.os_cloud.block_storage.add_type_access(volume_type, project.id)
 
 
+def manage_default_volume_type(
+    configuration: Configuration,
+    project: openstack.identity.v3.project.Project,
+    domain: openstack.identity.v3.domain.Domain,
+    classes: str,
+) -> None:
+    logger.info(f"{project.name} - managing default volume type")
+    if "quotaclass" in project:
+        quotaclass = get_quotaclass(classes, project.quotaclass)
+    else:
+        logger.warning(f"{project.name} - quotaclass not set --> use default")
+        if domain.name.startswith("ok"):
+            quotaclass = get_quotaclass(classes, "okeanos")
+        else:
+            quotaclass = get_quotaclass(classes, "basic")
+
+    if "default_volume_type" in project and project.default_volume_type:
+        # NOTE: It is impossible to unset a project property, so we need to make sure it actually contains a value
+        default_volume_type_name_or_id = project.default_volume_type
+    elif quotaclass and "default_volume_type" in quotaclass:
+        default_volume_type_name_or_id = quotaclass["default_volume_type"]
+    else:
+        default_volume_type_name_or_id = None
+
+    if default_volume_type_name_or_id:
+        # NOTE: Find declared volume type in public and private types (find_type() does not search private types)
+        default_volume_types = []
+        for is_public in [True, False]:
+            default_volume_types += [
+                volume_type
+                for volume_type in configuration.os_cloud.block_storage.types(
+                    is_public=is_public
+                )
+                if default_volume_type_name_or_id == volume_type.id
+                or default_volume_type_name_or_id == volume_type.name
+            ]
+
+        if not default_volume_types:
+            logger.error(
+                f"{project.name} - default volume type {default_volume_type_name_or_id} not found"
+            )
+            return
+        elif len(default_volume_types) > 1:
+            logger.error(
+                f"{project.name} - default volume type {default_volume_type_name_or_id} not unique, please use ID"
+            )
+            return
+        else:
+            default_volume_type = default_volume_types[0]
+
+    else:
+        default_volume_type = None
+
+    try:
+        current_default_type = configuration.os_cloud.block_storage.show_default_type(
+            project
+        )
+    except openstack.exceptions.NotFoundException:
+        current_default_type = None
+
+    if not default_volume_type and not current_default_type:
+        return
+    elif not default_volume_type and current_default_type:
+        logger.info(
+            f"{project.name} - Unsetting default volume type {current_default_type.volume_type_id}"
+        )
+        configuration.os_cloud.block_storage.unset_default_type(project)
+    elif (
+        default_volume_type and not current_default_type
+    ) or default_volume_type.id != current_default_type.volume_type_id:
+        logger.info(
+            f"{project.name} - Setting default volume type {default_volume_type.id} ({default_volume_type.name})"
+        )
+        configuration.os_cloud.block_storage.set_default_type(
+            project, default_volume_type
+        )
+
+
 def check_flavors(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
@@ -1224,6 +1302,7 @@ def process_project(
     manage_endpoints: bool,
     manage_homeprojects: bool,
     manage_privatevolumetypes: bool,
+    manage_defaultvolumetype: bool,
     manage_privateflavors: bool,
 ) -> None:
 
@@ -1274,6 +1353,9 @@ def process_project(
 
         if manage_privatevolumetypes:
             manage_private_volumetypes(configuration, project, domain)
+
+        if manage_defaultvolumetype:
+            manage_default_volume_type(configuration, project, domain, classes)
 
         check_flavors(configuration, project, domain, classes)
 
@@ -1331,6 +1413,13 @@ def run(
             help="Manage private volume types",
         ),
     ] = True,
+    manage_defaultvolumetype: Annotated[
+        bool,
+        typer.Option(
+            "--manage-defaultvolumetype/--nomanage-defaultvolumetype",
+            help="Manage default volume type",
+        ),
+    ] = True,
     manage_privateflavors: Annotated[
         bool,
         typer.Option(
@@ -1384,6 +1473,7 @@ def run(
             manage_endpoints,
             manage_homeprojects,
             manage_privatevolumetypes,
+            manage_defaultvolumetype,
             manage_privateflavors,
         )
 
@@ -1419,6 +1509,7 @@ def run(
             manage_endpoints,
             manage_homeprojects,
             manage_privatevolumetypes,
+            manage_defaultvolumetype,
             manage_privateflavors,
         )
 
@@ -1444,6 +1535,7 @@ def run(
                     manage_endpoints,
                     manage_homeprojects,
                     manage_privatevolumetypes,
+                    manage_defaultvolumetype,
                     manage_privateflavors,
                 )
 
@@ -1474,6 +1566,7 @@ def run(
                         manage_endpoints,
                         manage_homeprojects,
                         manage_privatevolumetypes,
+                        manage_defaultvolumetype,
                         manage_privateflavors,
                     )
 
