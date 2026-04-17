@@ -7,7 +7,6 @@ from typing import Any
 
 from openstack_project_manager.create_ldap import run
 
-
 app = typer.Typer()
 app.command()(run)
 
