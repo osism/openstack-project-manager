@@ -12,7 +12,6 @@ import openstack
 from tabulate import tabulate
 from typing import Optional
 
-
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 DEFAULT_MANAGER_ROLE = "manager"

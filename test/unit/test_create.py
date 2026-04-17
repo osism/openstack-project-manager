@@ -8,7 +8,6 @@ from typer.testing import CliRunner
 
 from openstack_project_manager.create import generate_password, run
 
-
 app = typer.Typer()
 app.command()(run)
 

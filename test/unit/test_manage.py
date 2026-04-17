@@ -41,12 +41,10 @@ from openstack_project_manager.manage import (
     run,
 )
 
-
 app = typer.Typer()
 app.command()(run)
 
-MOCK_QUOTA_CLASSES = yaml.safe_load(
-    """
+MOCK_QUOTA_CLASSES = yaml.safe_load("""
 ---
 default:
   compute:
@@ -79,8 +77,7 @@ flavor_test:
   parent: default
   flavors:
     - flavor_name
-"""
-)
+""")
 
 
 class CloudTest(unittest.TestCase):
