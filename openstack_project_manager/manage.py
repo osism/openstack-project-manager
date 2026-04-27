@@ -13,6 +13,7 @@ import yaml
 import typer
 from typing import List, Optional, Tuple
 from typing_extensions import Annotated
+from pathlib import Path
 
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
@@ -96,9 +97,17 @@ class Configuration:
         self.CACHE_ADMIN_USERS: dict = {}
 
 
-def get_quotaclass(classes: str, quotaclass: str) -> Optional[dict]:
-    with open(classes, "r") as fp:
-        quotaclasses = yaml.load(fp, Loader=yaml.SafeLoader)
+def get_quotaclass(classes: list[Path], quotaclass: str) -> Optional[dict]:
+    quotaclasses_raw = "---"
+    for classes_path in classes:
+        if classes_path.exists() and classes_path.is_file():
+            # NOTE: Concantenate classes, removing potential leading document separator
+            quotaclasses_raw += "\n" + classes_path.read_text().lstrip().removeprefix(
+                "---\n"
+            )
+
+    # NOTE: YAML load concatenated classes, so that later definitions overwrite earlier ones, while allowing usage of anchors referencing keys in other files
+    quotaclasses = yaml.load(quotaclasses_raw, Loader=yaml.SafeLoader)
 
     if quotaclass not in quotaclasses:
         return None
@@ -130,7 +139,7 @@ def check_bool(project: openstack.identity.v3.project.Project, param: str) -> bo
 def check_quota(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
-    classes: str,
+    classes: list[Path],
 ) -> None:
 
     quotaclass_name = ""
@@ -395,7 +404,7 @@ def manage_external_network_rbacs(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
     domain: openstack.identity.v3.domain.Domain,
-    classes: str,
+    classes: list[Path],
 ) -> None:
 
     if "quotaclass" in project:
@@ -456,7 +465,7 @@ def check_volume_types(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
     domain: openstack.identity.v3.domain.Domain,
-    classes: str,
+    classes: list[Path],
 ) -> None:
 
     if "quotaclass" in project:
@@ -541,7 +550,7 @@ def manage_default_volume_type(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
     domain: openstack.identity.v3.domain.Domain,
-    classes: str,
+    classes: list[Path],
 ) -> None:
     logger.info(f"{project.name} - managing default volume type")
     if "quotaclass" in project:
@@ -619,7 +628,7 @@ def check_flavors(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
     domain: openstack.identity.v3.domain.Domain,
-    classes: str,
+    classes: list[Path],
 ) -> None:
 
     if "quotaclass" in project:
@@ -1305,7 +1314,7 @@ def cache_images(
 def process_project(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
-    classes: str,
+    classes: list[Path],
     manage_endpoints: bool,
     manage_homeprojects: bool,
     manage_privatevolumetypes: bool,
@@ -1373,7 +1382,7 @@ def process_project(
 def handle_unmanaged_project(
     configuration: Configuration,
     project: openstack.identity.v3.project.Project,
-    classes: str,
+    classes: list[Path],
 ) -> None:
     # the service project must always be able to access the public network.
     if project.name == "service":
@@ -1438,8 +1447,18 @@ def run(
         str, typer.Option("--admin-domain", help="Admin domain")
     ] = "default",
     classes: Annotated[
-        str, typer.Option("--classes", help="Path to the classes.yml file")
-    ] = "etc/classes.yml",
+        list[Path],
+        typer.Option(
+            "--classes",
+            help=(
+                "Path to a classes.yml file. May be specified multiple times, in which case YAML files will be merged with the latter ones taking precedence "
+                "over previous ones. Non-existent files will be skipped"
+            ),
+        ),
+    ] = [
+        Path("etc/classes.yml"),
+        Path("/opt/configuration/environments/openstack/project-manager/classes.yml"),
+    ],
     endpoints: Annotated[
         str, typer.Option("--endpoints", help="Path to the endpoints.yml file")
     ] = "etc/endpoints.yml",
