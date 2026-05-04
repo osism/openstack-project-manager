@@ -8,10 +8,13 @@ from deepmerge import always_merger
 from loguru import logger
 import neutronclient
 import openstack
+from openstack.block_storage.v3._proxy import Proxy as BlockStorageProxy
+from openstack.identity.v3._proxy import Proxy as IdentityProxy
+from openstack.image.v2._proxy import Proxy as ImageProxy
 import os_client_config
 import yaml
 import typer
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple, cast
 from typing_extensions import Annotated
 
 DEFAULT_ROLES = ["member", "load-balancer_member"]
@@ -80,14 +83,15 @@ class Configuration:
         self.os_neutron = os_client_config.make_client("network", cloud=cloud_name)
 
         # cache roles
+        identity = cast(IdentityProxy, self.os_cloud.identity)
         self.CACHE_ROLES = {}
-        for role in self.os_cloud.identity.roles():
+        for role in identity.roles():
             self.CACHE_ROLES[role.name] = role
 
         # cache admin domain
         self.assign_admin_user = assign_admin_user
         if self.assign_admin_user:
-            self.CACHE_ADMIN_DOMAIN = self.os_cloud.identity.find_domain(admin_domain)
+            self.CACHE_ADMIN_DOMAIN = identity.find_domain(admin_domain)
             if not self.CACHE_ADMIN_DOMAIN:
                 logger.error(f"admin domain {admin_domain} does not exist")
                 sys.exit(1)
@@ -583,10 +587,9 @@ def manage_default_volume_type(
     else:
         default_volume_type = None
 
+    block_storage = cast(BlockStorageProxy, configuration.os_cloud.block_storage)
     try:
-        current_default_type = configuration.os_cloud.block_storage.show_default_type(
-            project
-        )
+        current_default_type = block_storage.show_default_type(project)
     except openstack.exceptions.NotFoundException:
         current_default_type = None
 
@@ -596,16 +599,14 @@ def manage_default_volume_type(
         logger.info(
             f"{project.name} - Unsetting default volume type {current_default_type.volume_type_id}"
         )
-        configuration.os_cloud.block_storage.unset_default_type(project)
+        block_storage.unset_default_type(project)
     elif (
         default_volume_type and not current_default_type
     ) or default_volume_type.id != current_default_type.volume_type_id:
         logger.info(
             f"{project.name} - Setting default volume type {default_volume_type.id} ({default_volume_type.name})"
         )
-        configuration.os_cloud.block_storage.set_default_type(
-            project, default_volume_type
-        )
+        block_storage.set_default_type(project, default_volume_type)
 
 
 def check_flavors(
@@ -1094,13 +1095,14 @@ def check_homeproject_permissions(
     if "homeproject" in project and not check_bool(project, "homeproject"):
         return
 
+    identity = cast(IdentityProxy, configuration.os_cloud.identity)
     username = project.name[len(domain.name) + 1 :]
-    user = configuration.os_cloud.identity.find_user(username, domain_id=domain.id)
+    user = identity.find_user(username, **{"domain_id": domain.id})
 
     # try username without the -XXX postfix
     if not user:
         username = re.sub(r"(.*)-[^.]*$", "\\1", project.name[len(domain.name) + 1 :])
-        user = configuration.os_cloud.identity.find_user(username, domain_id=domain.id)
+        user = identity.find_user(username, **{"domain_id": domain.id})
 
     # looks like there is no matching user for this project, nothing to do
     if not user:
@@ -1115,10 +1117,8 @@ def check_homeproject_permissions(
     for role_name in DEFAULT_ROLES:
         try:
             role = configuration.CACHE_ROLES[role_name]
-            configuration.os_cloud.identity.assign_project_role_to_user(
-                project.id, user.id, role.id
-            )
-        except:
+            identity.assign_project_role_to_user(project.id, user.id, role.id)
+        except Exception:
             pass
 
 
@@ -1129,22 +1129,25 @@ def assign_admin_user(
 ) -> None:
 
     admin_name = f"{domain.name}-admin"
+    identity = cast(IdentityProxy, configuration.os_cloud.identity)
 
     if admin_name in configuration.CACHE_ADMIN_USERS:
         admin_user = configuration.CACHE_ADMIN_USERS[admin_name]
     else:
-        admin_user = configuration.os_cloud.identity.find_user(
-            admin_name, domain_id=configuration.CACHE_ADMIN_DOMAIN.id
+        assert configuration.CACHE_ADMIN_DOMAIN is not None
+        admin_user = identity.find_user(
+            admin_name, **{"domain_id": configuration.CACHE_ADMIN_DOMAIN.id}
         )
         configuration.CACHE_ADMIN_USERS[admin_name] = admin_user
 
+    if admin_user is None:
+        return
+
     try:
         role = configuration.CACHE_ROLES["member"]
-        configuration.os_cloud.identity.assign_project_role_to_user(
-            project.id, admin_user.id, role.id
-        )
+        identity.assign_project_role_to_user(project.id, admin_user.id, role.id)
         logger.info(f"{project.name} - assign admin user {admin_name}")
-    except:
+    except Exception:
         pass
 
 
@@ -1195,16 +1198,17 @@ def share_image_with_project(
     project: openstack.identity.v3.project.Project,
 ) -> None:
 
-    member = configuration.os_cloud.image.find_member(project.id, image.id)
+    image_proxy = cast(ImageProxy, configuration.os_cloud.image)
+    member = image_proxy.find_member(project.id, image.id)
 
     if member:
         return
 
     logger.info(f"{project.name} - add shared image '{image.name}'")
-    member = configuration.os_cloud.image.add_member(image.id, member_id=project.id)
+    member = image_proxy.add_member(image.id, member_id=project.id)
 
     if member.status != "accepted":
-        configuration.os_cloud.image.update_member(member, image.id, status="accepted")
+        image_proxy.update_member(member, image.id, status="accepted")
 
 
 def share_images(
@@ -1261,23 +1265,23 @@ def cache_images(
         return
 
     # remove cache volume for which there is no image anymore
-    volumes: List[openstack.block_storage.v2.volume.Volume] = (
-        cloud_domain_admin.volume.volumes(owner=project_images.id)
-    )
+    domain_admin_volume = cast(BlockStorageProxy, cloud_domain_admin.volume)
+    domain_admin_image = cast(ImageProxy, cloud_domain_admin.image)
+    volumes = list(domain_admin_volume.volumes(owner=project_images.id))
 
     for volume in volumes:
-        image = cloud_domain_admin.image.find_image(name_or_id=volume.name[6:])
+        image = domain_admin_image.find_image(name_or_id=volume.name[6:])
         if not image:
             logger.info(
                 f"{domain.name} - remove cache volume {volume.name} for which there is no image anymore"
             )
-            cloud_domain_admin.volume.delete_volume(volume)
+            domain_admin_volume.delete_volume(volume)
 
     for image in images:
         volume_name = f"cache-{image.id}"
-        volume = cloud_domain_admin.volume.find_volume(name_or_id=volume_name)
+        cached_volume = domain_admin_volume.find_volume(name_or_id=volume_name)
 
-        if not volume:
+        if not cached_volume:
             logger.info(
                 f"{domain.name} - prepare image cache for '{image.name}' ({image.id})"
             )
@@ -1288,7 +1292,7 @@ def cache_images(
                 volume_size = image.min_disk
 
             try:
-                cloud_domain_admin.volume.create_volume(
+                domain_admin_volume.create_volume(
                     name=volume_name, size=volume_size, imageRef=image.id
                 )
             except openstack.exceptions.HttpException as e:

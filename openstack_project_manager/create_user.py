@@ -2,12 +2,14 @@
 
 import random
 import string
+import sys
 
 import typer
 from typing_extensions import Annotated
 import openstack
+from openstack.identity.v3._proxy import Proxy as IdentityProxy
 from tabulate import tabulate
-from typing import Optional
+from typing import Optional, cast
 
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
@@ -44,10 +46,11 @@ def run(
 
     # Connect to the OpenStack environment
     os_cloud = openstack.connect(cloud=cloud_name)
+    identity = cast(IdentityProxy, os_cloud.identity)
 
     # cache roles
     CACHE_ROLES = {}
-    for role in os_cloud.identity.roles():
+    for role in identity.roles():
         CACHE_ROLES[role.name] = role
 
     # Generate a random password from all ASCII characters + digits
@@ -56,20 +59,27 @@ def run(
 
     # Establish dedicated connection to Keystone service
     # FIXME(berendt): use get_domain
-    domain = os_cloud.identity.find_domain(domain_name)
+    domain = identity.find_domain(domain_name)
     if not domain:
         domain = os_cloud.create_domain(name=domain_name)
 
     # Find or create the user
     # FIXME(berendt): use get_project
     if domain_name_prefix:
-        project = os_cloud.identity.find_project(
+        project = identity.find_project(
             f"{domain_name}-{project_name}", domain_id=domain.id
         )
     else:
-        project = os_cloud.identity.find_project(project_name, domain_id=domain.id)
+        project = identity.find_project(project_name, domain_id=domain.id)
 
-    user = os_cloud.identity.find_user(name, domain_id=domain.id)
+    if not project:
+        logger_name = (
+            f"{domain_name}-{project_name}" if domain_name_prefix else project_name
+        )
+        print(f"project {logger_name} does not exist")
+        sys.exit(1)
+
+    user = identity.find_user(name, **{"domain_id": domain.id})
     if not user:
         user = os_cloud.create_user(
             name=name,
@@ -83,8 +93,8 @@ def run(
     for role_name in DEFAULT_ROLES:
         try:
             role = CACHE_ROLES[role_name]
-            os_cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
-        except:
+            identity.assign_project_role_to_user(project.id, user.id, role.id)
+        except Exception:
             pass
 
     result = [

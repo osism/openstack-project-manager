@@ -8,9 +8,10 @@ from dynaconf import Dynaconf
 import ldap
 from loguru import logger
 import openstack
+from openstack.identity.v3._proxy import Proxy as IdentityProxy
 import typer
 from typing_extensions import Annotated
-from typing import Optional
+from typing import Optional, cast
 
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
@@ -114,11 +115,15 @@ def run(
     # check openstack projects
 
     os_cloud = openstack.connect(cloud=cloud_name)
-    domain = os_cloud.identity.find_domain(domain_name)
+    identity = cast(IdentityProxy, os_cloud.identity)
+    domain = identity.find_domain(domain_name)
+    if not domain:
+        logger.error(f"domain {domain_name} does not exist")
+        sys.exit(1)
 
     # cache roles
     CACHE_ROLES = {}
-    for role in os_cloud.identity.roles():
+    for role in identity.roles():
         CACHE_ROLES[role.name] = role
 
     # handle project groups
@@ -132,7 +137,7 @@ def run(
     for a, b in result:
         m = re.search(rf"cn={ldap_project_group_prefix}(\w+),", a)
         if m:
-            project = os_cloud.identity.find_project(
+            project = identity.find_project(
                 f"{domain.name}-{m.group(1)}", domain_id=domain.id
             )
             if not project:
@@ -142,7 +147,7 @@ def run(
                     username = x.decode("utf-8")
 
                     logger.debug(f"Checking user {username}")
-                    user = os_cloud.identity.find_user(username, domain_id=domain.id)
+                    user = identity.find_user(username, **{"domain_id": domain.id})
 
                     if not user:
                         logger.warning(f"User {username} not found")
@@ -154,10 +159,10 @@ def run(
                     for role_name in DEFAULT_ROLES:
                         try:
                             role = CACHE_ROLES[role_name]
-                            os_cloud.identity.assign_project_role_to_user(
+                            identity.assign_project_role_to_user(
                                 project.id, user.id, role.id
                             )
-                        except:
+                        except Exception:
                             pass
 
     # handle the admin group
@@ -175,23 +180,23 @@ def run(
             username = x.decode("utf-8")
 
             logger.debug(f"Checking user {username}")
-            user = os_cloud.identity.find_user(username, domain_id=domain.id)
+            user = identity.find_user(username, **{"domain_id": domain.id})
 
             if not user:
                 logger.warning(f"User {username} not found")
                 continue
 
-            for project in os_cloud.identity.projects(domain_id=domain.id):
+            for project in identity.projects(domain_id=domain.id):
                 logger.info(
                     f"{project.name} - ensure admin project permissions for user = {username}, user_id = {user.id}"
                 )
                 for role_name in DEFAULT_ROLES:
                     try:
                         role = CACHE_ROLES[role_name]
-                        os_cloud.identity.assign_project_role_to_user(
+                        identity.assign_project_role_to_user(
                             project.id, user.id, role.id
                         )
-                    except:
+                    except Exception:
                         pass
 
     conn.unbind_s()

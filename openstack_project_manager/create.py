@@ -9,8 +9,9 @@ import typer
 from typing_extensions import Annotated
 import os_client_config
 import openstack
+from openstack.identity.v3._proxy import Proxy as IdentityProxy
 from tabulate import tabulate
-from typing import Optional
+from typing import Optional, cast
 
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
@@ -36,25 +37,31 @@ def generate_password(password_length: int) -> str:
 
 def try_assign_role(
     os_cloud: openstack.connection.Connection,
-    project: openstack.identity.v3.project.Project,
-    user: openstack.identity.v3.user.User,
+    project: Optional[openstack.identity.v3.project.Project],
+    user: Optional[openstack.identity.v3.user.User],
     role: openstack.identity.v3.role.Role,
 ) -> None:
+    if project is None or user is None:
+        return
     try:
-        os_cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
-    except:
+        identity = cast(IdentityProxy, os_cloud.identity)
+        identity.assign_project_role_to_user(project.id, user.id, role.id)
+    except Exception:
         pass
 
 
 def try_assign_role_to_group(
     os_cloud: openstack.connection.Connection,
-    project: openstack.identity.v3.project.Project,
-    group: openstack.identity.v3.group.Group,
+    project: Optional[openstack.identity.v3.project.Project],
+    group: Optional[openstack.identity.v3.group.Group],
     role: openstack.identity.v3.role.Role,
 ) -> None:
+    if project is None or group is None:
+        return
     try:
-        os_cloud.identity.assign_project_role_to_group(project.id, group.id, role.id)
-    except:
+        identity = cast(IdentityProxy, os_cloud.identity)
+        identity.assign_project_role_to_group(project.id, group.id, role.id)
+    except Exception:
         pass
 
 
@@ -175,10 +182,11 @@ def run(
 
     # Connect to the OpenStack environment
     os_cloud = openstack.connect(cloud=cloud_name)
+    identity = cast(IdentityProxy, os_cloud.identity)
 
     # cache roles
     CACHE_ROLES = {}
-    for role in os_cloud.identity.roles():
+    for role in identity.roles():
         CACHE_ROLES[role.name] = role
 
     # Generate a random name in the form abcd-0123
@@ -198,7 +206,7 @@ def run(
     # Establish dedicated connection to Keystone service
     # FIXME(berendt): use get_domain
     domain_created = False
-    domain = os_cloud.identity.find_domain(domain_name)
+    domain = identity.find_domain(domain_name)
     if not domain:
         domain = os_cloud.create_domain(name=domain_name)
         domain_created = True
@@ -206,7 +214,7 @@ def run(
     # Create domain admin group if domain was just created
     if domain_created:
         domain_admin_group_name = f"{domain_name}-admin"
-        domain_admin_group = os_cloud.identity.find_group(
+        domain_admin_group = identity.find_group(
             domain_admin_group_name, domain_id=domain.id
         )
         if not domain_admin_group:
@@ -218,14 +226,16 @@ def run(
             logger.info(f"Created domain admin group: {domain_admin_group_name}")
 
     # Find or create the project
+    project: Optional[openstack.identity.v3.project.Project] = None
+    user: Optional[openstack.identity.v3.user.User] = None
     if not create_domain:
         # FIXME(berendt): use get_project
-        project = os_cloud.identity.find_project(name, domain_id=domain.id)
+        project = identity.find_project(name, domain_id=domain.id)
         if not project:
             project = os_cloud.create_project(name=name, domain_id=domain.id)
 
         # Find or create a group with the same name as the project
-        group = os_cloud.identity.find_group(name, domain_id=domain.id)
+        group = identity.find_group(name, domain_id=domain.id)
         if not group:
             group = os_cloud.create_group(
                 name=name, description=f"Group for project {name}", domain=domain.id
@@ -237,7 +247,7 @@ def run(
 
         # Assign domain admin group to the project with default roles
         domain_admin_group_name = f"{domain_name}-admin"
-        domain_admin_group = os_cloud.identity.find_group(
+        domain_admin_group = identity.find_group(
             domain_admin_group_name, domain_id=domain.id
         )
         if domain_admin_group:
@@ -327,7 +337,7 @@ def run(
 
         # Find or create the user of the project and assign the default roles
         if create_user:
-            user = os_cloud.identity.find_user(name, domain_id=domain.id)
+            user = identity.find_user(name, **{"domain_id": domain.id})
             if not user:
                 user = os_cloud.create_user(
                     name=name,
@@ -351,7 +361,7 @@ def run(
                 "Application credential creation requires --create-user flag"
             )
 
-        if create_user and create_application_credential:
+        if create_user and create_application_credential and user is not None:
             # Create temporary connection as the newly created user
             try:
                 # Build user connection configuration
@@ -378,7 +388,8 @@ def run(
                 user_connection = openstack.connect(**user_cloud_config)
 
                 # Create Application Credential using user's connection
-                app_cred = user_connection.identity.create_application_credential(
+                user_identity = cast(IdentityProxy, user_connection.identity)
+                app_cred = user_identity.create_application_credential(
                     user=user.id,
                     name=name,
                 )
@@ -392,14 +403,15 @@ def run(
     admin_password = None
     admin_name = f"{domain_name}-admin"
 
+    admin_user: Optional[openstack.identity.v3.user.User] = None
     if assign_admin_user:
-        os_admin_domain = os_cloud.identity.find_domain(admin_domain)
+        os_admin_domain = identity.find_domain(admin_domain)
         if not os_admin_domain:
             logger.error(f"Admin domain {admin_domain} not found")
         else:
             admin_domain_id = os_admin_domain.id
-            admin_user = os_cloud.identity.find_user(
-                admin_name, domain_id=admin_domain_id
+            admin_user = identity.find_user(
+                admin_name, **{"domain_id": admin_domain_id}
             )
 
             if not admin_user and create_admin_user:
@@ -426,16 +438,16 @@ def run(
             # Add admin user to domain admin group (only when not in domain-only mode)
             if admin_user and not create_domain:
                 domain_admin_group_name = f"{domain_name}-admin"
-                domain_admin_group = os_cloud.identity.find_group(
+                domain_admin_group = identity.find_group(
                     domain_admin_group_name, domain_id=domain.id
                 )
                 if domain_admin_group:
                     try:
-                        os_cloud.identity.add_user_to_group(
+                        identity.add_user_to_group(
                             admin_user, domain_admin_group
                         )
                         logger.info(f"Added {admin_name} to domain admin group")
-                    except:
+                    except Exception:
                         # User might already be in the group
                         pass
 
@@ -443,16 +455,16 @@ def run(
         ["domain", domain_name, domain.id],
     ]
 
-    if not create_domain:
+    if not create_domain and project is not None:
         result.append(["project", name, project.id])
 
     # Outputs details about the domain admin user
-    if create_admin_user and admin_password:
+    if create_admin_user and admin_password and admin_user is not None:
         result.append(["admin", admin_name, admin_user.id])
         result.append(["admin_password", admin_password, ""])
 
     # Outputs details about the project user
-    if create_user and not create_domain:
+    if create_user and not create_domain and user is not None:
         result.append(["user", name, user.id])
         result.append(["password", password, ""])
 
