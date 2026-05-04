@@ -105,8 +105,15 @@ def get_quotaclass(classes: str, quotaclass: str) -> Optional[dict]:
 
     result = quotaclasses[quotaclass]
 
-    if "parent" in result and result["parent"] in quotaclasses:
-        return always_merger.merge(quotaclasses[result["parent"]], result)
+    if "parent" in result:
+        if result["parent"] in quotaclasses:
+            result = always_merger.merge(quotaclasses[result["parent"]], result)
+        else:
+            logger.error(
+                f"Could not find parent {result['parent']} for quota class {quotaclass}"
+            )
+
+        result.pop("parent", None)
 
     return result
 

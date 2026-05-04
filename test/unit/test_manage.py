@@ -173,7 +173,7 @@ class TestUtils(unittest.TestCase):
         self.patcher2 = patch("yaml.load")
         self.mock_yaml_load = self.patcher2.start()
         self.addCleanup(self.patcher2.stop)
-        self.mock_yaml_load.return_value = MOCK_QUOTA_CLASSES
+        self.mock_yaml_load.return_value = copy.deepcopy(MOCK_QUOTA_CLASSES)
 
     def test_get_quotaclass_0(self):
         result = get_quotaclass("classes.yaml", "default")
