@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch, ANY, call
 
 import copy
 import yaml
+from pathlib import Path
 
 import typer
 from typer.testing import CliRunner
@@ -44,7 +45,7 @@ from openstack_project_manager.manage import (
 app = typer.Typer()
 app.command()(run)
 
-MOCK_QUOTA_CLASSES = yaml.safe_load("""
+MOCK_QUOTA_CLASSES = """
 ---
 default:
   compute:
@@ -77,7 +78,7 @@ flavor_test:
   parent: default
   flavors:
     - flavor_name
-""")
+"""
 
 
 class CloudTest(unittest.TestCase):
@@ -163,33 +164,59 @@ class TestConfiguration(CloudTest):
         assert not config.assign_admin_user
 
 
-class TestUtils(unittest.TestCase):
+class TestUtilsBase(unittest.TestCase):
 
     def setUp(self):
-        self.patcher = patch("builtins.open")
-        self.mock_open = self.patcher.start()
-        self.addCleanup(self.patcher.stop)
+        super().setUp()
+        self.mock_path_1 = MagicMock()
+        self.mock_path_1.exists.return_value = True
+        self.mock_path_1.is_file.return_value = True
+        self.mock_path_1.read_text.return_value = copy.deepcopy(MOCK_QUOTA_CLASSES)
 
-        self.patcher2 = patch("yaml.load")
-        self.mock_yaml_load = self.patcher2.start()
-        self.addCleanup(self.patcher2.stop)
-        self.mock_yaml_load.return_value = copy.deepcopy(MOCK_QUOTA_CLASSES)
+        self.mock_path_2 = MagicMock()
+        self.mock_path_2.exists.return_value = True
+        self.mock_path_2.is_file.return_value = True
+        self.mock_path_2.read_text.return_value = ""
+
+        self.default_quotaclasses_path_list = [self.mock_path_1, self.mock_path_2]
+
+
+class TestUtils(TestUtilsBase):
 
     def test_get_quotaclass_0(self):
-        result = get_quotaclass("classes.yaml", "default")
-        self.mock_open.assert_called_once_with("classes.yaml", "r")
-        self.mock_yaml_load.assert_called_once()
-        assert result == MOCK_QUOTA_CLASSES["default"]
+        result = get_quotaclass(self.default_quotaclasses_path_list, "default")
+        self.mock_path_1.exists.assert_called_once()
+        self.mock_path_1.is_file.assert_called_once()
+        self.mock_path_1.read_text.assert_called_once()
+        self.mock_path_2.exists.assert_called_once()
+        self.mock_path_2.is_file.assert_called_once()
+        self.mock_path_2.read_text.assert_called_once()
+        assert result == yaml.safe_load(MOCK_QUOTA_CLASSES)["default"]
 
     def test_get_quotaclass_1(self):
-        result = get_quotaclass("classes.yaml", "notfound")
+        result = get_quotaclass(self.default_quotaclasses_path_list, "notfound")
         assert result is None
 
     def test_get_quotaclass_2(self):
-        result = get_quotaclass("classes.yaml", "unlimited")
-        assert result["compute"]["cores"] == -1
-        result["compute"]["cores"] = MOCK_QUOTA_CLASSES["default"]["compute"]["cores"]
-        assert result == MOCK_QUOTA_CLASSES["default"]
+        result = get_quotaclass(self.default_quotaclasses_path_list, "unlimited")
+        assert (
+            result["compute"]["cores"]
+            == yaml.safe_load(MOCK_QUOTA_CLASSES)["unlimited"]["compute"]["cores"]
+        )
+        result["compute"]["cores"] = yaml.safe_load(MOCK_QUOTA_CLASSES)["default"][
+            "compute"
+        ]["cores"]
+        assert result == yaml.safe_load(MOCK_QUOTA_CLASSES)["default"]
+
+    def test_get_quotaclass_3(self):
+        self.mock_path_2.read_text.return_value = (
+            "---\noverride:\n  parent: default\n  default_volume_type: override"
+        )
+
+        result = get_quotaclass(self.default_quotaclasses_path_list, "override")
+        expected = yaml.safe_load(MOCK_QUOTA_CLASSES)["default"]
+        expected.update(dict(default_volume_type="override"))
+        assert result == expected
 
     def test_check_bool_0(self):
         project = MagicMock()
@@ -214,7 +241,7 @@ class TestUtils(unittest.TestCase):
         assert not check_bool(project, "param")
 
 
-class TestBase(CloudTest):
+class TestBase(TestUtilsBase, CloudTest):
 
     def setUp(self):
         super().setUp()
@@ -223,9 +250,19 @@ class TestBase(CloudTest):
         self.mock_open = self.patcher3.start()
         self.addCleanup(self.patcher3.stop)
 
-        self.patcher4 = patch("yaml.load")
-        self.mock_yaml_load = self.patcher4.start()
+        if not hasattr(self, "select_quota_class"):
+            self.select_quota_class = "default"
+
+        self.patcher4 = patch("openstack_project_manager.manage.get_quotaclass")
+        self.mock_get_quotaclass = self.patcher4.start()
+        self.mock_get_quotaclass.return_value = copy.copy(
+            yaml.safe_load(MOCK_QUOTA_CLASSES)[self.select_quota_class]
+        )
         self.addCleanup(self.patcher4.stop)
+
+        self.patcher5 = patch("yaml.load")
+        self.mock_yaml_load = self.patcher5.start()
+        self.addCleanup(self.patcher5.stop)
         self.mock_yaml_load.return_value = {
             "default": ["A", "B"],
             "orchestration": ["B", "C"],
@@ -240,16 +277,6 @@ class TestBase(CloudTest):
         self.config = Configuration(
             False, "cloud-name", "endpoints.yml", True, "admin-domain"
         )
-
-        if not hasattr(self, "select_quota_class"):
-            self.select_quota_class = "default"
-
-        self.patcher5 = patch("openstack_project_manager.manage.get_quotaclass")
-        self.mock_get_quotaclass = self.patcher5.start()
-        self.mock_get_quotaclass.return_value = copy.copy(
-            MOCK_QUOTA_CLASSES[self.select_quota_class]
-        )
-        self.addCleanup(self.patcher5.stop)
 
 
 class TestCheckQuota(TestBase):
@@ -670,7 +697,10 @@ class TestManageDefaultVolumeType(TestBase):
         )
 
         manage_default_volume_type(
-            self.config, self.mock_project, self.mock_domain, "classes.yml"
+            self.config,
+            self.mock_project,
+            self.mock_domain,
+            self.default_quotaclasses_path_list,
         )
 
         self.config.os_cloud.block_storage.types.assert_not_called()
@@ -696,7 +726,10 @@ class TestManageDefaultVolumeType(TestBase):
         )
 
         manage_default_volume_type(
-            self.config, self.mock_project, self.mock_domain, "classes.yml"
+            self.config,
+            self.mock_project,
+            self.mock_domain,
+            self.default_quotaclasses_path_list,
         )
 
         self.config.os_cloud.block_storage.types.assert_has_calls(
@@ -726,7 +759,10 @@ class TestManageDefaultVolumeType(TestBase):
         )
 
         manage_default_volume_type(
-            self.config, self.mock_project, self.mock_domain, "classes.yml"
+            self.config,
+            self.mock_project,
+            self.mock_domain,
+            self.default_quotaclasses_path_list,
         )
 
         self.config.os_cloud.block_storage.types.assert_has_calls(
@@ -754,7 +790,10 @@ class TestManageDefaultVolumeType(TestBase):
         )
 
         manage_default_volume_type(
-            self.config, self.mock_project, self.mock_domain, "classes.yml"
+            self.config,
+            self.mock_project,
+            self.mock_domain,
+            self.default_quotaclasses_path_list,
         )
 
         self.config.os_cloud.block_storage.types.assert_has_calls(
@@ -784,7 +823,10 @@ class TestManageDefaultVolumeType(TestBase):
         )
 
         manage_default_volume_type(
-            self.config, self.mock_project, self.mock_domain, "classes.yml"
+            self.config,
+            self.mock_project,
+            self.mock_domain,
+            self.default_quotaclasses_path_list,
         )
 
         self.config.os_cloud.block_storage.types.assert_has_calls(
@@ -805,7 +847,10 @@ class TestManageDefaultVolumeType(TestBase):
         )
 
         manage_default_volume_type(
-            self.config, self.mock_project, self.mock_domain, "classes.yml"
+            self.config,
+            self.mock_project,
+            self.mock_domain,
+            self.default_quotaclasses_path_list,
         )
 
         self.config.os_cloud.block_storage.types.assert_not_called()
@@ -832,7 +877,10 @@ class TestManageDefaultVolumeType(TestBase):
         )
 
         manage_default_volume_type(
-            self.config, self.mock_project, self.mock_domain, "classes.yml"
+            self.config,
+            self.mock_project,
+            self.mock_domain,
+            self.default_quotaclasses_path_list,
         )
 
         self.config.os_cloud.block_storage.types.assert_not_called()
@@ -1926,10 +1974,18 @@ class TestCLI(CloudTest):
                 "--classes=other.yaml",
             ],
         )
+
         self.assertEqual(result.exit_code, 0, (result, result.stdout))
 
         self.mock_process_project.assert_called_once_with(
-            ANY, self.mock_project1, "other.yaml", True, True, False, False, False
+            ANY,
+            self.mock_project1,
+            [Path("other.yaml")],
+            True,
+            True,
+            False,
+            False,
+            False,
         )
 
     def test_cli_9(self):
