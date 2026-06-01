@@ -8,4 +8,4 @@ os-client-config==2.3.0
 python-ldap==3.4.7
 python-neutronclient==11.8.0
 tabulate==0.10.0
-typer==0.26.1
+typer==0.26.4
