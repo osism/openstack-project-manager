@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "6d5499d4ccb0f30954fb66048ab265a8c7d3f760e6b8155ed58f2ec159e8e6ea"
+            "sha256": "b5bdef209faf661dccfdd94ff868a0c3ec04e874bde8c755c3ffd93ebd770778"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -750,12 +750,12 @@
         },
         "python-neutronclient": {
             "hashes": [
-                "sha256:6ea711eb88fcde47523250ac829cb9b9da8bc0bf2dd0205add4e1c9a4cce0515",
-                "sha256:f0bbb3f14f11a89cbb8489fa7b1341067647403592e03956d7f79bb757d0befe"
+                "sha256:624a735ccd6d1e7405aba08309e058cddf7de7c477195ec31e4752d794a54437",
+                "sha256:f9ea3631101aa5ab833c26c30d27b48afac70a9333bb66c2fa1fb8072b8f93d6"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.9'",
-            "version": "==11.8.0"
+            "version": "==12.0.0"
         },
         "pyyaml": {
             "hashes": [
