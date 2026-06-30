@@ -1,0 +1,17 @@
+---
+apiVersion: c5c3.io/v1alpha1
+kind: ControlPlane
+metadata:
+  name: controlplane
+  namespace: openstack
+spec:
+  openStackRelease: "2025.2"
+  services:
+    keystone:
+      replicas: 1
+      publicEndpoint: https://keystone.127-0-0-1.nip.io:8443/v3
+      gateway:
+        parentRef:
+          name: openstack-gw
+        hostname: keystone.127-0-0-1.nip.io
+        path: /
