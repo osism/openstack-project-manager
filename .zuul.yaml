@@ -11,6 +11,18 @@
     vars:
       tox_envlist: test
 
+- job:
+    name: openstack-project-manager-integration
+    # The full forge ControlPlane stack (cert-manager, MariaDB/Memcached/
+    # external-secrets/keystone/c5c3 operators, k-orc, OpenBao, flux) saturates
+    # the default node's CPU before the Envoy data-plane Pod can schedule, so
+    # Gateway/openstack-gw never gets a backing Pod and stays NoResources. The
+    # larger flavour has the CPU headroom the single-node kind cluster needs.
+    nodeset: ubuntu-noble-large
+    pre-run: playbooks/pre-integration.yml
+    run: playbooks/test-integration.yml
+    timeout: 2400
+
 - project:
     merge-mode: squash-merge
     default-branch: main
@@ -19,6 +31,7 @@
         - flake8
         - openstack-project-manager-mypy
         - openstack-project-manager-tox
+        - openstack-project-manager-integration
         - yamllint
         - python-black
 
