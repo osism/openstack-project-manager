@@ -22,14 +22,6 @@
         - yamllint
         - python-black
 
-    gate:
-      jobs:
-        - flake8
-        - openstack-project-manager-mypy
-        - openstack-project-manager-tox
-        - yamllint
-        - python-black
-
     periodic-daily:
       jobs:
         - flake8
