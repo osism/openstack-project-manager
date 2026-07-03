@@ -8,8 +8,17 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Pin forge to a known-good commit; forge is a fast-moving prototyping repo.
-FORGE_REF="${FORGE_REF:-35ef73ae48d6814270af1674370d60ae410efdc7}"
+# Track the latest forge main; forge is a fast-moving prototyping repo and we
+# deliberately do not pin to a commit. main caps each kind node's containerd
+# RLIMIT_NOFILE (default 1048576) inside deploy-infra before any workload is
+# scheduled. Docker Desktop's containerd ships LimitNOFILE=infinity, so pods
+# otherwise inherit an ~1e9 open-file limit and uWSGI (the Keystone API server)
+# pre-allocates multiple GiB per worker and is OOM-killed within seconds of
+# spawning; raising the memory limit does not help. The cap lets Keystone come
+# up at its default 512Mi/2-worker footprint. main also carries the single-node
+# backing-service defaults our controlplane.yaml relies on
+# (infrastructure.{database,cache}.replicas).
+FORGE_REF="${FORGE_REF:-main}"
 FORGE_DIR="${FORGE_DIR:-${TMPDIR:-/tmp}/opm-forge}"
 
 NAMESPACE="${NAMESPACE:-openstack}"
@@ -30,10 +39,12 @@ fi
 # forge's own installer pins kind/kubectl into ${HOME}/.local/bin.
 if [[ ! -d "${FORGE_DIR}/.git" ]]; then
     git clone https://github.com/c5c3/forge.git "${FORGE_DIR}"
-else
-    git -C "${FORGE_DIR}" fetch --quiet origin
 fi
-git -C "${FORGE_DIR}" checkout --quiet "${FORGE_REF}"
+# Fetch and check out the tip of ${FORGE_REF} (default: main) as a detached
+# HEAD, so a reused clone always advances to the latest commit instead of
+# staying on a stale local branch.
+git -C "${FORGE_DIR}" fetch --quiet origin "${FORGE_REF}"
+git -C "${FORGE_DIR}" checkout --quiet FETCH_HEAD
 
 make -C "${FORGE_DIR}" install-test-deps
 export PATH="${HOME}/.local/bin:${PATH}"

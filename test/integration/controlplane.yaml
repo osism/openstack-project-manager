@@ -6,6 +6,20 @@ metadata:
   namespace: openstack
 spec:
   openStackRelease: "2025.2"
+  # Pin the operator-projected backing services to a single instance for the
+  # single-node kind cluster. The CRD default for both is 3 (a 3-node Galera
+  # MariaDB plus three Memcached pods, matching the production baseline), which
+  # OOM-kills a single-node kind. database.replicas: 1 yields a single-instance
+  # non-Galera MariaDB (the c5c3-operator derives Galera from replicas > 1);
+  # cache.replicas: 1 a single Memcached pod. Only replicas is set here; the
+  # operator defaulting webhook fills the clusterRef/database/secretRef/backend
+  # references. database.replicas is immutable after creation, but CI recreates
+  # the cluster on every run so that never bites here.
+  infrastructure:
+    database:
+      replicas: 1
+    cache:
+      replicas: 1
   services:
     keystone:
       replicas: 1
