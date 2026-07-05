@@ -72,3 +72,10 @@ password from the operator-projected
 `clouds.yaml` (gitignored) with `verify: false`, because the Envoy Gateway
 serves a self-signed cert. `run.sh` removes the generated `clouds.yaml` on
 exit.
+
+Keystone's own database credentials are engine-issued (forge's Dynamic
+credentials mode, the managed-mode default): after applying the ControlPlane
+CR, `deploy_keystone.sh` waits for the projected MariaDB and runs forge's
+`setup-database-tenant.sh` to onboard the OpenBao database-engine tenant, the
+same step forge's `deploy-infra` performs when it applies its bundled CR. No
+long-lived DB password is seeded anywhere.

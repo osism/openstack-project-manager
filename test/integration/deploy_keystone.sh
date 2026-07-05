@@ -62,6 +62,39 @@ kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1 \
     || kubectl create namespace "${NAMESPACE}"
 kubectl apply -f "${HERE}/controlplane.yaml"
 
+# 3. OpenBao database-engine tenant onboarding -------------------------------
+# forge defaults a managed-mode ControlPlane to Dynamic (engine-issued) DB
+# credentials; the static per-ControlPlane credential seed was retired. The
+# engine-issued creds path database/mariadb/creds/keystone-<namespace> only
+# exists once setup-database-tenant.sh has provisioned the per-tenant
+# connection and role, and deploy-infra runs that hook only when it applies the
+# bundled CR itself (WITH_CONTROLPLANE_CR=true). This harness applies its own
+# CR, so mirror deploy-infra's openbao_onboard_database_tenant here: wait for
+# the projected MariaDB to be Ready, then run the (idempotent) tenant script
+# with the OpenBao root token. Without this, DBCredentialsReady never turns
+# True and the Ready wait below times out.
+echo "Waiting for MariaDB openstack-db to be projected..."
+for _ in $(seq 1 30); do
+    if kubectl get mariadb/openstack-db -n "${NAMESPACE}" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 10
+done
+kubectl wait mariadb/openstack-db -n "${NAMESPACE}" \
+    --for=condition=Ready --timeout=600s
+
+BAO_TOKEN="$(kubectl get secret openbao-init-keys -n openbao-system \
+    -o jsonpath='{.data.init-output}' | base64 -d | jq -r '.root_token')"
+if [[ -z "${BAO_TOKEN}" || "${BAO_TOKEN}" == "null" ]]; then
+    echo "ERROR: could not extract the OpenBao root token from" \
+        "openbao-system/openbao-init-keys." >&2
+    exit 1
+fi
+export BAO_TOKEN
+bash "${FORGE_DIR}/deploy/openbao/bootstrap/setup-database-tenant.sh" \
+    "${NAMESPACE}" controlplane
+unset BAO_TOKEN
+
 # Wait for the ControlPlane's aggregate Ready condition. A bare
 # `kubectl wait --for=condition=Ready --timeout=15m` is silent for the whole
 # window, so a stuck sub-condition (the operator reconciles them in order:
@@ -91,7 +124,7 @@ while true; do
     sleep 15
 done
 
-# 3. clouds.yaml from the operator-projected admin credentials --------------
+# 4. clouds.yaml from the operator-projected admin credentials --------------
 admin_password="$(kubectl get secret controlplane-keystone-admin-credentials \
     -n "${NAMESPACE}" -o jsonpath='{.data.password}' | base64 -d)"
 
@@ -127,7 +160,7 @@ with open(os.environ["CLOUDS_FILE"], "w") as f:
 PY
 echo "Wrote clouds.yaml to ${CLOUDS_FILE}"
 
-# 4. Ensure the roles create.py expects exist on the bare Keystone ----------
+# 5. Ensure the roles create.py expects exist on the bare Keystone ----------
 # create.py indexes its role cache directly (CACHE_ROLES[role_name]) when it
 # assigns DEFAULT_ROLES = member, load-balancer_member, so a missing role
 # aborts the run. A bare forge Keystone ships member but not

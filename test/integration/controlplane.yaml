@@ -11,13 +11,24 @@ spec:
   # MariaDB plus three Memcached pods, matching the production baseline), which
   # OOM-kills a single-node kind. database.replicas: 1 yields a single-instance
   # non-Galera MariaDB (the c5c3-operator derives Galera from replicas > 1);
-  # cache.replicas: 1 a single Memcached pod. Only replicas is set here; the
-  # operator defaulting webhook fills the clusterRef/database/secretRef/backend
-  # references. database.replicas is immutable after creation, but CI recreates
-  # the cluster on every run so that never bites here.
+  # cache.replicas: 1 a single Memcached pod. database.storageSize is pinned to
+  # 512Mi (mirroring forge's kind Quick Start CR) so the projected MariaDB
+  # requests a test-sized volume instead of the 100Gi CRD default (the
+  # production baseline) that a CI run never fills. Only these fields are set
+  # here; the operator defaulting webhook fills the clusterRef/database/
+  # secretRef/backend references. database.replicas and database.storageSize
+  # are immutable after creation, but CI recreates the cluster on every run so
+  # that never bites here.
+  #
+  # database.credentialsMode is deliberately left unset: forge defaults managed
+  # mode to Dynamic (engine-issued short-lived DB credentials from the OpenBao
+  # database engine; the static per-ControlPlane seed was retired). That mode
+  # needs the per-tenant database-engine onboarding, which deploy_keystone.sh
+  # runs after applying this CR.
   infrastructure:
     database:
       replicas: 1
+      storageSize: 512Mi
     cache:
       replicas: 1
   services:
