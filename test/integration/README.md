@@ -39,6 +39,11 @@ make integration-down
 named `forge` already exists (for example one you started with
 `make integration-up`), it is reused and left in place on exit.
 
+Note: current forge main also brings up its Garage object store (the S3
+backend for forge's Glance suites) unconditionally during `deploy-infra` —
+there is no opt-out flag. This test does not use it; it only adds a
+garage-operator and a single-replica Garage pod plus some provisioning time.
+
 ## Environment overrides
 
 | Variable | Default | Purpose |
@@ -46,7 +51,7 @@ named `forge` already exists (for example one you started with
 | `FORGE_REF` | `main` | forge git ref to check out (tip is fetched on every run; not pinned). |
 | `FORGE_DIR` | `${TMPDIR:-/tmp}/opm-forge` | Where forge is cloned. |
 | `CLUSTER_NAME` | `forge` | kind cluster name. |
-| `KIND_HOST_PORT` | `8443` | Host port the Envoy Gateway (and Keystone) is exposed on. |
+| `KIND_HOST_PORT` | `8443` | Host port the Envoy Gateway (and Keystone) is exposed on; also injected into the CR's `publicEndpoint` at apply time. |
 | `NAMESPACE` | `openstack` | Namespace the ControlPlane CR is applied to. |
 | `OS_CLIENT_CONFIG_FILE` | `test/integration/clouds.yaml` | Generated clouds.yaml path. |
 | `KEEP_PROJECT` | `0` | Set to `1` to keep the created project after `verify.py` (the cluster is torn down regardless). |

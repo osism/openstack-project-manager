@@ -52,7 +52,12 @@ export PATH="${HOME}/.local/bin:${PATH}"
 # Pin the optional forge stacks off: this Keystone-only integration test needs
 # neither Chaos Mesh nor the Prometheus stack, and they only add provisioning
 # time and load. These are forge's defaults today; set them explicitly so a
-# future forge default flip cannot silently pull them in.
+# future forge default flip cannot silently pull them in. The Garage object
+# store (S3 backend for forge's Glance suites) has no such flag: current forge
+# main deploys it unconditionally and waits for the GarageCluster to reach
+# Running, so deploy-infra now also brings up the garage-operator plus a
+# single-replica Garage pod (the kind overlay patches the 3-replica production
+# baseline down). Harmless for this test beyond the extra provisioning time.
 KIND_HOST_PORT="${KIND_HOST_PORT}" WITH_CONTROLPLANE=true \
     WITH_CHAOS_MESH=false WITH_PROMETHEUS=false \
     make -C "${FORGE_DIR}" deploy-infra
@@ -60,7 +65,19 @@ KIND_HOST_PORT="${KIND_HOST_PORT}" WITH_CONTROLPLANE=true \
 # 2. Keystone-only ControlPlane ---------------------------------------------
 kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1 \
     || kubectl create namespace "${NAMESPACE}"
-kubectl apply -f "${HERE}/controlplane.yaml"
+# The tracked CR carries the harness default port 8443. Inject the effective
+# KIND_HOST_PORT into spec.services.keystone.publicEndpoint so Keystone
+# advertises the actually reachable URL in its catalog when the port is
+# overridden (e.g. a second cluster beside a dev cluster already holding
+# 8443) -- the same discipline forge's deploy-infra applies to its bundled CR.
+# yq (mikefarah) is guaranteed here: deploy-infra hard-requires it on the
+# WITH_CONTROLPLANE path and its pre-flight ran before this step.
+cp_manifest="$(mktemp)"
+KIND_HOST_PORT="${KIND_HOST_PORT}" yq eval \
+    '.spec.services.keystone.publicEndpoint = "https://keystone.127-0-0-1.nip.io:" + strenv(KIND_HOST_PORT) + "/v3"' \
+    "${HERE}/controlplane.yaml" > "${cp_manifest}"
+kubectl apply -f "${cp_manifest}"
+rm -f "${cp_manifest}"
 
 # 3. OpenBao database-engine tenant onboarding -------------------------------
 # forge defaults a managed-mode ControlPlane to Dynamic (engine-issued) DB
@@ -98,8 +115,11 @@ unset BAO_TOKEN
 # Wait for the ControlPlane's aggregate Ready condition. A bare
 # `kubectl wait --for=condition=Ready --timeout=15m` is silent for the whole
 # window, so a stuck sub-condition (the operator reconciles them in order:
-# InfrastructureReady -> KeystoneReady -> KORCReady -> AdminCredentialReady ->
-# CatalogReady) is indistinguishable from a dead hang in the CI log. Poll
+# NamespacesReady -> InfrastructureReady -> ESOTenantStoreReady ->
+# DBCredentialsReady -> KeystoneReady -> KORCReady -> AdminCredentialReady ->
+# CatalogReady -> ServiceAccountsReady; HorizonReady joins after KeystoneReady
+# only when services.horizon is set) is indistinguishable from a dead hang in
+# the CI log. Poll
 # instead and print the first not-yet-True condition each tick, so the log
 # shows which stage is pending; on timeout dump the full CR before failing
 # (the verbose pod/event dump is left to run.sh's diagnostics trap).

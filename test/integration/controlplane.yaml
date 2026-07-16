@@ -34,6 +34,8 @@ spec:
   services:
     keystone:
       replicas: 1
+      # Matches the harness default KIND_HOST_PORT=8443; deploy_keystone.sh
+      # rewrites the port at apply time when KIND_HOST_PORT is overridden.
       publicEndpoint: https://keystone.127-0-0-1.nip.io:8443/v3
       gateway:
         parentRef:
