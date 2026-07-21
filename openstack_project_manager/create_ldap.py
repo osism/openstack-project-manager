@@ -12,6 +12,8 @@ import typer
 from typing_extensions import Annotated
 from typing import Optional
 
+from openstack_project_manager.proxies import identity_proxy
+
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
@@ -166,11 +168,16 @@ def run(
     # check openstack projects
 
     os_cloud = openstack.connect(cloud=cloud_name)
-    domain = os_cloud.identity.find_domain(domain_name)
+    identity = identity_proxy(os_cloud)
+
+    domain = identity.find_domain(domain_name)
+    if not domain:
+        logger.error(f"domain {domain_name} does not exist")
+        sys.exit(1)
 
     # cache roles
     CACHE_ROLES = {}
-    for role in os_cloud.identity.roles():
+    for role in identity.roles():
         CACHE_ROLES[role.name] = role
 
     for a, b in result:
@@ -182,12 +189,12 @@ def run(
             username = x.decode("utf-8")
 
             logger.debug(f"Checking user {username}")
-            user = os_cloud.identity.find_user(username, domain_id=domain.id)
+            user = identity.find_user(username, domain_id=domain.id)
 
             if not user:
                 continue
 
-            project = os_cloud.identity.find_project(
+            project = identity.find_project(
                 f"{domain.name}-{username}", domain_id=domain.id
             )
 
@@ -200,16 +207,18 @@ def run(
             result = subprocess.check_output(command, shell=True)
 
             # ensure that the user is assigned to the new project
-            project = os_cloud.identity.find_project(
+            project = identity.find_project(
                 f"{domain.name}-{username}", domain_id=domain.id
             )
+
+            if not project:
+                logger.error(f"project {domain.name}-{username} was not created")
+                continue
 
             for role_name in DEFAULT_ROLES:
                 try:
                     role = CACHE_ROLES[role_name]
-                    os_cloud.identity.assign_project_role_to_user(
-                        project.id, user.id, role.id
-                    )
+                    identity.assign_project_role_to_user(project.id, user.id, role.id)
                 except:
                     pass
 

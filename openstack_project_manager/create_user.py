@@ -9,6 +9,8 @@ import openstack
 from tabulate import tabulate
 from typing import Optional
 
+from openstack_project_manager.proxies import identity_proxy
+
 # Default roles to be assigned to a new user for a project
 DEFAULT_ROLES = ["member", "load-balancer_member"]
 
@@ -44,10 +46,11 @@ def run(
 
     # Connect to the OpenStack environment
     os_cloud = openstack.connect(cloud=cloud_name)
+    identity = identity_proxy(os_cloud)
 
     # cache roles
     CACHE_ROLES = {}
-    for role in os_cloud.identity.roles():
+    for role in identity.roles():
         CACHE_ROLES[role.name] = role
 
     # Generate a random password from all ASCII characters + digits
@@ -56,34 +59,40 @@ def run(
 
     # Establish dedicated connection to Keystone service
     # FIXME(berendt): use get_domain
-    domain = os_cloud.identity.find_domain(domain_name)
+    domain = identity.find_domain(domain_name)
     if not domain:
         domain = os_cloud.create_domain(name=domain_name)
 
     # Find or create the user
     # FIXME(berendt): use get_project
     if domain_name_prefix:
-        project = os_cloud.identity.find_project(
+        project = identity.find_project(
             f"{domain_name}-{project_name}", domain_id=domain.id
         )
     else:
-        project = os_cloud.identity.find_project(project_name, domain_id=domain.id)
+        project = identity.find_project(project_name, domain_id=domain.id)
 
-    user = os_cloud.identity.find_user(name, domain_id=domain.id)
-    if not user:
+    if not project:
+        raise typer.BadParameter(
+            f"project {project_name} not found in domain {domain_name}"
+        )
+
+    existing_user = identity.find_user(name, domain_id=domain.id)
+    if existing_user:
+        user = existing_user
+        os_cloud.update_user(user, password=password)
+    else:
         user = os_cloud.create_user(
             name=name,
             password=password,
             default_project=project,
             domain_id=domain.id,
         )
-    else:
-        os_cloud.update_user(user, password=password)
 
     for role_name in DEFAULT_ROLES:
         try:
             role = CACHE_ROLES[role_name]
-            os_cloud.identity.assign_project_role_to_user(project.id, user.id, role.id)
+            identity.assign_project_role_to_user(project.id, user.id, role.id)
         except:
             pass
 
