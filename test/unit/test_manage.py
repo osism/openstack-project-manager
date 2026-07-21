@@ -563,7 +563,7 @@ class TestCheckVolumeTypes(TestBase):
     def mock_volume_type(self, name, location):
         vt = MagicMock()
         vt.name = name
-        vt.location.project.id = location
+        vt.location = {"project": {"id": location}}
         return vt
 
     def test_check_volume_types_0(self):
@@ -1562,7 +1562,10 @@ class TestImages(TestBase):
         mock_volume1.name = "cache-5678"
         mock_volume2 = MagicMock()
         mock_volume2.name = "cache-7777"
-        self.config.os_cloud.volume.volumes.return_value = [mock_volume1, mock_volume2]
+        self.config.os_cloud.block_storage.volumes.return_value = [
+            mock_volume1,
+            mock_volume2,
+        ]
 
         def mock_find_volume(name_or_id=None):
             if name_or_id == "cache-5678":
@@ -1571,12 +1574,14 @@ class TestImages(TestBase):
                 return mock_volume2
             return None
 
-        self.config.os_cloud.volume.find_volume.side_effect = mock_find_volume
+        self.config.os_cloud.block_storage.find_volume.side_effect = mock_find_volume
 
         cache_images(self.config, self.mock_domain)
 
-        self.config.os_cloud.volume.delete_volume.assert_called_once_with(mock_volume2)
-        self.config.os_cloud.volume.create_volume.assert_called_once_with(
+        self.config.os_cloud.block_storage.delete_volume.assert_called_once_with(
+            mock_volume2
+        )
+        self.config.os_cloud.block_storage.create_volume.assert_called_once_with(
             name="cache-9999", size=20, imageRef=9999
         )
 
