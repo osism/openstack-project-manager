@@ -1,0 +1,59 @@
+---
+- name: Pre integration play
+  hosts: all
+
+  roles:
+    - ensure-pip
+    - ensure-pipenv
+    - ensure-docker
+
+  tasks:
+    - name: Ensure required APT packages are installed
+      ansible.builtin.apt:
+        name:
+          - jq
+          - libldap2-dev
+          - libsasl2-dev
+        update_cache: true
+      become: true  # run as root
+
+    - name: Install mikefarah/yq
+      # forge's deploy-infra.sh needs mikefarah/yq (Go) for its `select(...)`,
+      # `strenv(...)` and `-i` filters. The Ubuntu `yq` APT package is the
+      # incompatible python-yq (a jq wrapper), so fetch the upstream binary.
+      ansible.builtin.get_url:
+        url: "https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_linux_amd64"
+        dest: /usr/local/bin/yq
+        owner: root
+        group: root
+        mode: "0755"
+      become: true
+      vars:
+        yq_version: v4.53.3
+
+    - name: Keep router advertisements honoured while IPv6 forwarding is on
+      # The OSISM Zuul nodes are IPv6-only and learn their default route via
+      # SLAAC/RA. When kind makes Docker create a dual-stack network it enables
+      # net.ipv6.conf.all.forwarding, after which the kernel (default
+      # accept_ra=1) stops honouring RAs and the node drops off the network
+      # mid-run. accept_ra=2 keeps RAs honoured while forwarding is on. The
+      # all/default keys do not retroactively apply to an already-up interface,
+      # so the live default interface is set explicitly too -- that per-interface
+      # key is what actually preserves the running node's default route.
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/99-opm-integration-accept-ra.conf
+        content: |
+          net.ipv6.conf.all.accept_ra = 2
+          net.ipv6.conf.default.accept_ra = 2
+          {% if ansible_default_ipv6.interface is defined %}
+          net.ipv6.conf.{{ ansible_default_ipv6.interface }}.accept_ra = 2
+          {% endif %}
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+
+    - name: Apply the sysctl settings
+      ansible.builtin.command: sysctl --system
+      become: true
+      changed_when: false

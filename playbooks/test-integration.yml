@@ -1,0 +1,25 @@
+---
+- name: Run integration play
+  hosts: all
+
+  vars:
+    python_venv_dir: /tmp/venv
+
+  tasks:
+    - name: Install Python dependencies into the venv
+      ansible.builtin.pip:
+        name:
+          - tox
+          - openstacksdk
+        virtualenv: "{{ python_venv_dir }}"
+        virtualenv_command: python3 -m venv
+
+    - name: Run the integration test
+      ansible.builtin.shell: |
+        set -e -o pipefail -x
+        export PATH="{{ python_venv_dir }}/bin:${HOME}/.local/bin:${PATH}"
+        make integration
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+        executable: /bin/bash
+      changed_when: true
