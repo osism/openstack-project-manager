@@ -1,6 +1,6 @@
 PyYAML==6.0.3
 click==8.5.0
-deepmerge==2.1.0
+deepmerge==3.0.1
 dynaconf==3.3.4
 loguru==0.7.3
 openstacksdk==4.17.0
