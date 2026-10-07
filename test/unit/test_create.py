@@ -248,7 +248,7 @@ class TestCLI(unittest.TestCase):
             "default-sandbox", domain_id=1234
         )
         self.mock_os_cloud.update_user.assert_called_once_with(
-            self.mock_os_user, password=ANY
+            self.mock_os_user.id, password=ANY
         )
 
     def test_cli_9(self):
@@ -379,7 +379,7 @@ class TestCLI(unittest.TestCase):
 
         self.mock_generate_password.assert_not_called()
         self.mock_os_cloud.update_user.assert_called_once_with(
-            self.mock_os_user, password="otherpassword"
+            self.mock_os_user.id, password="otherpassword"
         )
 
     def test_cli_15(self):

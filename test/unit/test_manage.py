@@ -951,8 +951,12 @@ class TestCheckPrivateFlavorTypes(TestBase):
             self.mock_flavor("company-already-using", False),
             self.mock_flavor("flavor_2", False),
         ]
+        flavors_by_id = {
+            x.id: x for x in self.config.os_cloud.list_flavors.return_value
+        }
 
-        def mock_list_flavor_access(flavor):
+        def mock_list_flavor_access(flavor_id):
+            flavor = flavors_by_id[flavor_id]
             accessIds = []
             if flavor.name in [
                 "COMPANY-private-flavor",

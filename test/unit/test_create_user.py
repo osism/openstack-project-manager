@@ -87,7 +87,7 @@ class TestCLI(unittest.TestCase):
             "", domain_id=self.mock_os_domain.id
         )
         self.mock_os_cloud.update_user.assert_called_once_with(
-            self.mock_os_user, password="randompassword"
+            self.mock_os_user.id, password="randompassword"
         )
 
         for role in self.os_roles:
@@ -142,7 +142,7 @@ class TestCLI(unittest.TestCase):
 
         self.mock_generate_password.assert_not_called()
         self.mock_os_cloud.update_user.assert_called_once_with(
-            self.mock_os_user, password="secret"
+            self.mock_os_user.id, password="secret"
         )
 
     def test_cli_8(self):
@@ -168,7 +168,7 @@ class TestCLI(unittest.TestCase):
         self.mock_os_cloud.create_user.assert_called_once_with(
             name="notfound",
             password="randompassword",
-            default_project=self.mock_os_project,
+            default_project=self.mock_os_project.id,
             domain_id=self.mock_os_domain.id,
         )
 
