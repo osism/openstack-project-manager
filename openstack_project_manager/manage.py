@@ -137,6 +137,15 @@ def get_quotaclass(classes: list[Path], quotaclass: str) -> Optional[dict]:
     return result
 
 
+def get_domain(
+    configuration: Configuration, name_or_id: str
+) -> openstack.identity.v3.domain.Domain:
+    domain = configuration.os_cloud.get_domain(name_or_id=name_or_id)
+    if domain is None:
+        raise ValueError(f"domain {name_or_id} does not exist")
+    return domain
+
+
 def check_bool(project: openstack.identity.v3.project.Project, param: str) -> bool:
     return param in project and str(project.get(param)) in [
         "true",
@@ -164,7 +173,7 @@ def check_quota(
         quotaclass_name = project.quotaclass
         quotaclass = get_quotaclass(classes, quotaclass_name)
     else:
-        domain = configuration.os_cloud.get_domain(name_or_id=project.domain_id)
+        domain = get_domain(configuration, project.domain_id)
         if domain.name.startswith("ok"):
             quotaclass_name = "okeanos"
             quotaclass = get_quotaclass(classes, quotaclass_name)
@@ -353,7 +362,7 @@ def check_bandwidth_limit(
     quotaclass: dict,
 ) -> None:
 
-    domain = configuration.os_cloud.get_domain(name_or_id=project.domain_id)
+    domain = get_domain(configuration, project.domain_id)
     domain_name = domain.name.lower()
 
     if domain_name == "default" and project.name in ["admin", "service"]:
@@ -693,7 +702,7 @@ def manage_private_flavors(
             continue
 
         projects_with_access = [
-            x["tenant_id"] for x in configuration.os_cloud.list_flavor_access(flavor)
+            x["tenant_id"] for x in configuration.os_cloud.list_flavor_access(flavor.id)
         ]
 
         if project.id in projects_with_access:
@@ -806,6 +815,9 @@ def add_service_network(
             f"{project.name} - check if service rbac policy must be created ({net_name})"
         )
         net = configuration.os_cloud.get_network(net_name)
+        if net is None:
+            logger.warning(f"{project.name} - network {net_name} does not exist")
+            return
         rbac_policies = configuration.os_neutron.list_rbac_policies(
             **{
                 "target_tenant": project.id,
@@ -852,6 +864,9 @@ def del_service_network(
         )
 
         public_net = configuration.os_cloud.get_network(public_net_name)
+        if public_net is None:
+            logger.warning(f"{project.name} - network {public_net_name} does not exist")
+            return
         rbac_policies = configuration.os_neutron.list_rbac_policies(
             **{
                 "target_tenant": project.id,
@@ -892,6 +907,9 @@ def add_external_network(
         )
 
         public_net = configuration.os_cloud.get_network(public_net_name)
+        if public_net is None:
+            logger.warning(f"{project.name} - network {public_net_name} does not exist")
+            return
         rbac_policies = configuration.os_neutron.list_rbac_policies(
             **{
                 "target_tenant": project.id,
@@ -938,6 +956,9 @@ def del_external_network(
         )
 
         public_net = configuration.os_cloud.get_network(public_net_name)
+        if public_net is None:
+            logger.warning(f"{project.name} - network {public_net_name} does not exist")
+            return
         rbac_policies = configuration.os_neutron.list_rbac_policies(
             **{
                 "target_tenant": project.id,
@@ -975,10 +996,15 @@ def create_service_network(
     subnet_cidr: Optional[str] = None,
 ) -> None:
 
-    domain = configuration.os_cloud.get_domain(name_or_id=project.domain_id)
+    domain = get_domain(configuration, project.domain_id)
     project_service = configuration.os_cloud.get_project(
         name_or_id=f"{domain.name}-service"
     )
+    if project_service is None:
+        logger.error(
+            f"{project.name} - service project {domain.name}-service does not exist"
+        )
+        return
 
     net = configuration.os_cloud.get_network(
         net_name, filters={"project_id": project_service.id}
@@ -1004,7 +1030,8 @@ def create_service_network(
     if not subnet:
         logger.info(f"{project.name} - create service subnet ({subnet_name})")
 
-        if not configuration.dry_run:
+        # net is only None in dry-run mode
+        if not configuration.dry_run and net is not None:
             if subnet_cidr:
                 subnet = configuration.os_cloud.create_subnet(
                     net.id,
@@ -1029,7 +1056,7 @@ def create_network(
     net_name: str,
     subnet_name: str,
     availability_zone: str,
-) -> Tuple[bool, openstack.network.v2.subnet.Subnet]:
+) -> Tuple[bool, Optional[openstack.network.v2.subnet.Subnet]]:
 
     attach = False
     net = configuration.os_cloud.get_network(
@@ -1053,7 +1080,8 @@ def create_network(
     if not subnet:
         logger.info(f"{project.name} - create subnet ({subnet_name})")
 
-        if not configuration.dry_run:
+        # net is only None in dry-run mode
+        if not configuration.dry_run and net is not None:
             subnet = configuration.os_cloud.create_subnet(
                 net.id,
                 tenant_id=project.id,
@@ -1082,13 +1110,18 @@ def create_network_with_router(
     )
 
     if not router:
-        public_network_id = configuration.os_cloud.get_network(public_net_name).id
+        public_net = configuration.os_cloud.get_network(public_net_name)
+        if public_net is None:
+            logger.error(
+                f"{project.name} - public network {public_net_name} does not exist"
+            )
+            return
         logger.info(f"{project.name} - create router ({router_name})")
 
         if not configuration.dry_run:
             router = configuration.os_cloud.create_router(
                 name=router_name,
-                ext_gateway_net_id=public_network_id,
+                ext_gateway_net_id=public_net.id,
                 enable_snat=True,
                 project_id=project.id,
                 availability_zone_hints=[availability_zone],
@@ -1103,7 +1136,8 @@ def create_network_with_router(
         logger.info(
             f"{project.name} - attach subnet ({subnet_name}) to router ({router_name})"
         )
-        if not configuration.dry_run:
+        # router and subnet are only None in dry-run mode
+        if not configuration.dry_run and router is not None and subnet is not None:
             configuration.os_cloud.add_router_interface(router, subnet_id=subnet.id)
 
 
@@ -1338,7 +1372,7 @@ def process_project(
         )
         return
     else:
-        domain = configuration.os_cloud.get_domain(project.domain_id)
+        domain = get_domain(configuration, project.domain_id)
 
         # At this point, quotaclass is guaranteed to exist due to early return above
         quotaclass = project.quotaclass
@@ -1482,6 +1516,8 @@ def run(
 
     # check existence of project and/or domain
 
+    domain: Optional[openstack.identity.v3.domain.Domain]
+
     if project_name and not domain_name:
         project = configuration.os_cloud.get_project(name_or_id=project_name)
         if not project:
@@ -1492,7 +1528,7 @@ def run(
             handle_unmanaged_project(configuration, project, classes)
             sys.exit(0)
 
-        domain = configuration.os_cloud.get_domain(name_or_id=project.domain_id)
+        domain = get_domain(configuration, project.domain_id)
         logger.info(f"{domain.name} - domain_id = {domain.id}")
 
         process_project(
@@ -1516,6 +1552,11 @@ def run(
             project = configuration.os_cloud.get_project(
                 name_or_id=project_name, domain_id=domain.id
             )
+            if not project:
+                logger.error(
+                    f"project {project_name} in domain {domain_name} does not exist"
+                )
+                sys.exit(1)
 
             handle_unmanaged_project(configuration, project, classes)
             sys.exit(0)

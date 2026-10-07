@@ -80,12 +80,12 @@ def run(
     existing_user = identity.find_user(name, domain_id=domain.id)
     if existing_user:
         user = existing_user
-        os_cloud.update_user(user, password=password)
+        os_cloud.update_user(user.id, password=password)
     else:
         user = os_cloud.create_user(
             name=name,
             password=password,
-            default_project=project,
+            default_project=project.id,
             domain_id=domain.id,
         )
 
