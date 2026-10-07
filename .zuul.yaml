@@ -2,11 +2,13 @@
 - job:
     name: openstack-project-manager-mypy
     parent: mypy
+    nodeset: ubuntu-noble
     pre-run: playbooks/mypy.yml
 
 - job:
     name: openstack-project-manager-tox
     parent: tox
+    nodeset: ubuntu-noble
     pre-run: playbooks/tox.yml
     vars:
       tox_envlist: test
@@ -16,16 +18,22 @@
     default-branch: main
     check:
       jobs:
-        - flake8
+        - flake8:
+            nodeset: ubuntu-noble
         - openstack-project-manager-mypy
         - openstack-project-manager-tox
-        - yamllint
-        - python-black
+        - python-black:
+            nodeset: ubuntu-noble
+        - yamllint:
+            nodeset: ubuntu-noble
 
     periodic-daily:
       jobs:
-        - flake8
+        - flake8:
+            nodeset: ubuntu-noble
         - openstack-project-manager-mypy
         - openstack-project-manager-tox
-        - yamllint
-        - python-black
+        - python-black:
+            nodeset: ubuntu-noble
+        - yamllint:
+            nodeset: ubuntu-noble
