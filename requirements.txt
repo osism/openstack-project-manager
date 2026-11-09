@@ -1,5 +1,5 @@
 PyYAML==6.0.3
-click==8.5.0
+click==8.5.1
 deepmerge==2.1.0
 dynaconf==3.3.5
 loguru==0.7.3
