@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-PyYAML = "==6.0.3"
+PyYAML = "==6.0.4"
 deepmerge = "==2.1.0"
 dynaconf = "==3.3.5"
 loguru = "==0.7.3"
